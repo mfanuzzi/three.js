@@ -1,0 +1,1089 @@
+<html lang="en">
+<head>
+	<title>MFMFMFMFS LSOOOOO</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			color: #61443e;
+			font-family: Monospace;
+			font-size: 13px;
+			text-align: center;
+			background-color: #bfd1e5;
+			margin: 0px;
+			overflow: hidden;
+		}
+
+		#info {
+			position: absolute;
+			top: 0px;
+			width: 100%;
+			padding: 5px;
+		}
+
+		a {
+			color: #a06851;
+		}
+	</style>
+</head>
+<body>
+	<div id="container"><br /><br /><br /><br /><br />Loading...</div>
+
+	<script src="../build/three.js"></script>
+	<script src="js/libs/ammo.js"></script>
+	<script src="js/controls/OrbitControls.js"></script>
+	<script src="js/utils/BufferGeometryUtils.js"></script>
+	<script src="js/WebGL.js"></script>
+	<script src="js/loaders/GLTFLoader.js"></script>
+	<script src="js/libs/stats.min.js"></script>
+	<script src="js/postprocessing/EffectComposer.js"></script>
+	<script src="js/postprocessing/RenderPass.js"></script>
+	<script src="js/postprocessing/ShaderPass.js"></script>
+	<script src="js/postprocessing/HalftonePass.js"></script>
+
+	<script src="js/shaders/CopyShader.js"></script>
+	<script src="js/shaders/HalftoneShader.js"></script>
+	<script src="js/shaders/DepthLimitedBlurShader.js"></script>
+	<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
+
+	<script src="js/geometries/ConvexGeometry.js"></script>
+	<script src="js/QuickHull.js"></script>
+
+	<script src="js/modifiers/SimplifyModifier.js"></script>
+
+	<script src="js/csg.js"></script>
+	<script src="js/ThreeCSG.js"></script>
+
+	<script src="rayintersect.js"></script>
+
+	<script>
+
+		if (WEBGL.isWebGLAvailable() === false) {
+
+			document.body.appendChild(WEBGL.getWebGLErrorMessage());
+			document.getElementById('container').innerHTML = "";
+
+		}
+
+		// Graphics variables
+		var container, stats;
+		var camera, controls, scene, renderer;
+		var textureLoader;
+		var clock = new THREE.Clock();
+		var clickRequest = false;
+		var mouseCoords = new THREE.Vector2();
+		var raycaster = new THREE.Raycaster();
+		var ballMaterial = new THREE.MeshPhongMaterial({ color: 0x202020 });
+		var pos = new THREE.Vector3();
+		var quat = new THREE.Quaternion();
+
+		// Physics variables
+		var gravityConstant = -13;
+		var physicsWorld;
+		var rigidBodies = [];
+		var softBodies = [];
+		var margin = 0.05;
+		var transformAux1;
+		var softBodyHelpers;
+		var composer, renderPass, halftonePass, params;
+
+		var cameraFacingThings = [];
+		var collidableMeshList = [];
+		var theThings = [];
+		var ground;
+		var eye = [null,null];
+
+		var intersectionals = [];
+
+		Ammo().then(function (AmmoLib) {
+
+			Ammo = AmmoLib;
+
+			init();
+			animate();
+
+		});
+
+		function groupBy(objectArray, property) {
+			return objectArray.reduce(function (acc, obj) {
+				var key = obj[property];
+				if (!acc[key]) {
+					acc[key] = [];
+				}
+				acc[key].push(obj);
+				return acc;
+			}, {});
+		}
+
+		function init() {
+
+			initGraphics();
+
+			initPhysics();
+
+			createObjects();
+
+			initInput();
+
+		}
+
+		function initGraphics() {
+
+			container = document.getElementById('container');
+			container.innerHTML = '';
+
+			camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.2, 2000);
+
+			scene = new THREE.Scene();
+			scene.background = new THREE.Color(0xffffff);
+
+			camera.position.set(40, 2, 0);
+			camera.rotation.order = 'YXZ';
+			camera.rotation.x = -1.5;
+
+			renderer = new THREE.WebGLRenderer();
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.shadowMap.enabled = true;
+			container.appendChild(renderer.domElement);
+
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+			controls.target.set(0, 20, 0);
+			controls.update();
+
+			textureLoader = new THREE.TextureLoader();
+
+			var ambientLight = new THREE.AmbientLight(0xaaaaaa);
+			scene.add(ambientLight);
+
+			var light = new THREE.DirectionalLight(0xffffff, 3); //light intensity
+			light.position.set(- 10, 10, 5);
+			light.castShadow = true;
+			var d = 20;
+			light.shadow.camera.left = - d;
+			light.shadow.camera.right = d;
+			light.shadow.camera.top = d;
+			light.shadow.camera.bottom = - d;
+
+			light.shadow.camera.near = 2;
+			light.shadow.camera.far = 50;
+
+			light.shadow.mapSize.x = 1024;
+			light.shadow.mapSize.y = 1024;
+
+			scene.add(light);
+
+			stats = new Stats();
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.top = '0px';
+			container.appendChild(stats.domElement);
+
+
+			window.addEventListener('resize', onWindowResize, false);
+
+			// post-processing
+			composer = new THREE.EffectComposer(renderer);
+			renderPass = new THREE.RenderPass(scene, camera);
+			params = {
+				shape: 1,
+				radius: 3,
+				rotateR: Math.PI / 12,
+				rotateB: Math.PI / 12 * 2,
+				rotateG: Math.PI / 12 * 3,
+				scatter: 0,
+				blending: 1,
+				blendingMode: 1,
+				greyscale: true,
+				disable: false
+			};
+			halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
+			composer.addPass(renderPass);
+			composer.addPass(halftonePass);
+
+
+
+
+		}
+
+		function initPhysics() {
+
+			// Physics configuration
+
+			var collisionConfiguration = new Ammo.btSoftBodyRigidBodyCollisionConfiguration();
+			var dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
+			var broadphase = new Ammo.btDbvtBroadphase();
+			var solver = new Ammo.btSequentialImpulseConstraintSolver();
+			var softBodySolver = new Ammo.btDefaultSoftBodySolver();
+			physicsWorld = new Ammo.btSoftRigidDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration, softBodySolver);
+			physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
+			physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+
+			transformAux1 = new Ammo.btTransform();
+			softBodyHelpers = new Ammo.btSoftBodyHelpers();
+
+		}
+
+		function createEye(meshToTarget) {
+			// Create rigid eye
+			var eyeMass = 1;
+			var eyeRadius = 2;
+
+			for (var i = 0; i < 2; i++) {
+				eye[i] = new THREE.Mesh(new THREE.SphereBufferGeometry(eyeRadius, 24, 10), new THREE.MeshPhongMaterial({ color: 0xFFFFFF }));
+				eye[i].pointColor = 'red';
+				eye[i].scale.x = 1.7;
+				eye[i].castShadow = true;
+				eye[i].receiveShadow = false;
+				textureLoader.load("textures/eye.jpg", function (texture) {
+					for (var i = 0; i < 2; i++) {
+						eye[i].material.map = texture;
+						eye[i].material.map.offset.x = .25;
+						eye[i].material.map.offset.y = .1;
+						eye[i].material.needsUpdate = true;
+					}
+				});
+				var eyeShape = new Ammo.btSphereShape(eyeRadius);
+				eyeShape.setMargin(margin);
+
+				var ipos = new THREE.Vector3();
+				var iquat = new THREE.Quaternion();
+				ipos.set(0, 20, 0);
+				iquat.set(0, 0, 0, 1);
+
+				if (meshToTarget) {
+					meshToTarget.geometry.computeBoundingBox();   
+					var center = meshToTarget.geometry.boundingBox.getCenter();
+					meshToTarget.localToWorld(center);
+					ipos = center;
+					ipos.y = 35;
+				}
+
+				// space out the second eye
+				ipos.y += (1.2 * i);
+				ipos.x += (6.5 * i);
+				ipos.z += (1.3 * i);
+
+				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
+				eyeBody.setFriction(0.9);
+			}
+		
+			//cameraFacingThings.push(eyeBody);
+		}
+
+		function createObjects() {
+
+			var mat = new THREE.ShaderMaterial({
+				uniforms: {},
+				vertexShader: [
+					"varying vec2 vUV;",
+					"varying vec3 vNormal;",
+					"void main() {",
+					"vUV = uv;",
+					"vNormal = vec3( normal );",
+					"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+					"}"
+				].join("\n"),
+				fragmentShader: [
+					"varying vec2 vUV;",
+					"varying vec3 vNormal;",
+					"void main() {",
+					"vec4 c = vec4( abs( vNormal ) + vec3( vUV, 0.0 ), 0.0 );",
+					"gl_FragColor = c;",
+					"}"
+				].join("\n")
+			});
+
+
+			//// Ground (fake)
+			//var fakeGround = new THREE.Mesh(new THREE.PlaneGeometry(30, 30, 32, 32), new THREE.MeshBasicMaterial({ color: 0xdddddd, side: THREE.DoubleSide }));
+			//fakeGround.rotation.x = Math.PI / 2;
+			////scene.add(fakeGround);
+			////console.log(fakeGround);
+			//collidableMeshList.push(fakeGround);
+
+			// Ground (hard)
+			pos.set(0, -1, 0);
+			quat.set(0, 0, 0, 1);
+			ground = createParalellepiped(40, 1, 40, 0, pos, quat, new THREE.MeshPhongMaterial({ color: 0xDDDDDD }));
+			ground[0].castShadow = false;
+			ground[0].receiveShadow = true;
+			ground[0].material.color.setHex(0x888888);
+			/*textureLoader.load("textures/grid.png", function (texture) {
+
+				texture.wrapS = THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				texture.repeat.set(40, 40);
+				ground.material.color.setHex(0x000000);
+
+			});
+			*/
+			createEye();
+			pos.y = 25;
+			quat.set(0, 0, 0, 1);
+
+			// Create soft volumes
+			var volumeMass = 15;
+
+			var loader = new THREE.GLTFLoader();
+
+			loader.load("models/gltf/eyees.glb", function (gltf) {
+
+				//mesheye = gltf.scene.children[3];
+				//scene.add( mesheye );
+
+
+				mesh = gltf.scene.children[2];
+				mesh.position.set(2, 30, 0);
+				//mesh.position.y = 30;
+				mesh.scale.set(5, 5, 5);
+				mesh.rotation.set(.5, 0, 0);
+
+				// apply the transform
+				mesh.updateMatrix();
+				mesh.geometry.applyMatrix(mesh.matrix);
+				mesh.scale.set(1, 1, 1);
+				mesh.updateMatrix();
+
+				var thing = createSoftVolume(mesh.geometry, 9, 40);
+				theThings.push(thing);
+				//console.log(thing);
+
+				//window.setTimeout(function () {
+				//	//rayCollide(theThing, collidableMeshList);
+				//	getPointsBelowY(theThing, 0);
+				//	scene.remove(ground[0]);
+				//}, 5000);
+
+			});
+
+
+		}
+
+		function processGeometry(bufGeometry) {
+
+			// Ony consider the position values when merging the vertices
+			var posOnlyBufGeometry = new THREE.BufferGeometry();
+			posOnlyBufGeometry.addAttribute('position', bufGeometry.getAttribute('position'));
+			posOnlyBufGeometry.setIndex(bufGeometry.getIndex());
+
+			// Merge the vertices so the triangle soup is converted to indexed triangles
+			var indexedBufferGeom = THREE.BufferGeometryUtils.mergeVertices(posOnlyBufGeometry);
+
+			// Create index arrays mapping the indexed vertices to bufGeometry vertices
+			mapIndices(bufGeometry, indexedBufferGeom);
+
+		}
+
+		function isEqual(x1, y1, z1, x2, y2, z2) {
+
+			var delta = 0.000001;
+			return Math.abs(x2 - x1) < delta &&
+				Math.abs(y2 - y1) < delta &&
+				Math.abs(z2 - z1) < delta;
+
+		}
+
+		function mapIndices(bufGeometry, indexedBufferGeom) {
+
+			// Creates ammoVertices, ammoIndices and ammoIndexAssociation in bufGeometry
+
+			var vertices = bufGeometry.attributes.position.array;
+			var idxVertices = indexedBufferGeom.attributes.position.array;
+			var indices = indexedBufferGeom.index.array;
+
+			var numIdxVertices = idxVertices.length / 3;
+			var numVertices = vertices.length / 3;
+
+			bufGeometry.ammoVertices = idxVertices;
+			bufGeometry.ammoIndices = indices;
+			bufGeometry.ammoIndexAssociation = [];
+
+			for (var i = 0; i < numIdxVertices; i++) {
+
+				var association = [];
+				bufGeometry.ammoIndexAssociation.push(association);
+
+				var i3 = i * 3;
+
+				for (var j = 0; j < numVertices; j++) {
+
+					var j3 = j * 3;
+					if (isEqual(idxVertices[i3], idxVertices[i3 + 1], idxVertices[i3 + 2],
+						vertices[j3], vertices[j3 + 1], vertices[j3 + 2])) {
+
+						association.push(j3);
+
+					}
+
+				}
+
+			}
+
+		}
+
+		function createSoftVolume(bufferGeom, mass, pressure) {
+
+			processGeometry(bufferGeom);
+
+			var volume = new THREE.Mesh(bufferGeom, new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true }));
+			volume.castShadow = true;
+			volume.receiveShadow = true;
+			volume.frustumCulled = false;
+			scene.add(volume);
+
+			textureLoader.load("textures/eye.jpg", function (texture) {
+
+				volume.material.map = texture;
+				volume.material.map.offset.x = .25;
+				volume.material.map.offset.y = .1;
+				volume.material.needsUpdate = true;
+				//console.log(volume.material);
+
+			});
+
+			// Volume physic object
+
+			var volumeSoftBody = softBodyHelpers.CreateFromTriMesh(
+				physicsWorld.getWorldInfo(),
+				bufferGeom.ammoVertices,
+				bufferGeom.ammoIndices,
+				bufferGeom.ammoIndices.length / 3,
+				true);
+
+			var sbConfig = volumeSoftBody.get_m_cfg();
+			sbConfig.set_viterations(40);
+			sbConfig.set_piterations(40);
+
+			// Soft-soft and soft-rigid collisions
+			sbConfig.set_collisions(0x11);
+
+			// Friction
+			sbConfig.set_kDF(0.1);
+			// Damping
+			sbConfig.set_kDP(0.01);
+			// Pressure
+			sbConfig.set_kPR(pressure);
+			// Stiffness
+			volumeSoftBody.get_m_materials().at(0).set_m_kLST(0.9);
+			volumeSoftBody.get_m_materials().at(0).set_m_kAST(0.9);
+
+			volumeSoftBody.setTotalMass(mass, false);
+			Ammo.castObject(volumeSoftBody, Ammo.btCollisionObject).getCollisionShape().setMargin(margin);
+			physicsWorld.addSoftBody(volumeSoftBody, 1, - 1);
+			volume.userData.physicsBody = volumeSoftBody;
+			// Disable deactivation
+			volumeSoftBody.setActivationState(4);
+
+			softBodies.push(volume);
+
+			volume.pointColor = 'skyblue';
+
+			return volume;
+		}
+
+		function createParalellepiped(sx, sy, sz, mass, pos, quat, material) {
+
+			var threeObject = new THREE.Mesh(new THREE.BoxBufferGeometry(sx, sy, sz, 1, 1, 1), material);
+			var shape = new Ammo.btBoxShape(new Ammo.btVector3(sx * 0.5, sy * 0.5, sz * 0.5));
+			shape.setMargin(margin);
+
+			var rb = createRigidBody(threeObject, shape, mass, pos, quat);
+
+			return [threeObject, rb];
+
+		}
+
+		function createRigidBody(threeObject, physicsShape, mass, pos, quat) {
+
+			threeObject.position.copy(pos);
+			threeObject.quaternion.copy(quat);
+
+			var transform = new Ammo.btTransform();
+			transform.setIdentity();
+			transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+			transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+			var motionState = new Ammo.btDefaultMotionState(transform);
+
+			var localInertia = new Ammo.btVector3(0, 0, 0);
+			physicsShape.calculateLocalInertia(mass, localInertia);
+
+			var rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, physicsShape, localInertia);
+			var body = new Ammo.btRigidBody(rbInfo);
+
+			threeObject.userData.physicsBody = body;
+
+			scene.add(threeObject);
+
+			if (mass > 0) {
+
+				rigidBodies.push(threeObject);
+
+				// Disable deactivation
+				body.setActivationState(4);
+
+			}
+
+			physicsWorld.addRigidBody(body);
+
+			return body;
+
+		}
+
+		function initInput() {
+
+			window.addEventListener('mousedown', function (event) {
+
+				if (!clickRequest) {
+
+					mouseCoords.set(
+						(event.clientX / window.innerWidth) * 2 - 1,
+						- (event.clientY / window.innerHeight) * 2 + 1
+					);
+
+					clickRequest = true;
+
+				}
+
+			}, false);
+
+		}
+
+		function processClick() {
+
+			if (clickRequest) {
+
+				raycaster.setFromCamera(mouseCoords, camera);
+
+				// Creates a ball
+				var ballMass = 3;
+				var ballRadius = 0.4;
+
+				ball = new THREE.Mesh(new THREE.SphereBufferGeometry(ballRadius, 18, 16), ballMaterial);
+				ball.castShadow = true;
+				ball.receiveShadow = true;
+
+				var ballShape = new Ammo.btSphereShape(ballRadius);
+				ballShape.setMargin(margin);
+				pos.copy(raycaster.ray.direction);
+				pos.add(raycaster.ray.origin);
+				quat.set(0, 0, 0, 1);
+				var ballBody = createRigidBody(ball, ballShape, ballMass, pos, quat);
+				ballBody.setFriction(0.5);
+
+				pos.copy(raycaster.ray.direction);
+				pos.multiplyScalar(14);
+				ballBody.setLinearVelocity(new Ammo.btVector3(pos.x, pos.y, pos.z));
+
+				clickRequest = false;
+
+			}
+
+		}
+
+		function onWindowResize() {
+
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+
+			renderer.setSize(window.innerWidth, window.innerHeight);
+
+		}
+
+		var tcollision = false;
+		function trackIntersectingPoints(collisionObject, y) {
+
+			// How much of a margin do we want?
+			var play = .1;
+
+			// I guess this is neccesary to get the current data
+			collisionObject.updateMatrix();
+
+			// Initalize collisionObject.trackedPointIndicies if not already
+			if (collisionObject.hasOwnProperty('trackedPointIndicies') === false) {
+				collisionObject.trackedPointIndicies = [];
+			}
+
+			var vec = new THREE.Vector3();
+			var attribute = collisionObject.geometry.attributes.position; // we want the position data
+			for (var i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
+				vec.fromBufferAttribute(attribute, i); // extract the x,y,z coordinates
+				vec.applyMatrix4(collisionObject.matrix); // apply the mesh's matrix transform
+				if (Math.abs(y - vec.y) < play && Math.abs(vec.x) < 20 && Math.abs(vec.z) < 20) {
+					//add the current point to teh tracking array
+					if (collisionObject.trackedPointIndicies.includes(i) === false) {
+						collisionObject.trackedPointIndicies.push(i);
+					}
+					if (tcollision === false) {
+						tcollision = true;
+						console.log('xxx');
+						window.dispatchEvent(new Event('collision'));
+						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant/3, 0));
+						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant/3, 0));
+					}
+				}
+				// capture current position of all tracked points
+				if (collisionObject.trackedPointIndicies.includes(i)) {
+					// capture this moment in time
+					var e = vec.clone();
+					e.o = collisionObject.pointColor;
+					intersectionals.push(e);
+				}
+			}
+		}
+
+		function markIntersectingPoints(collisionObject, y) {
+			// How much of a margin do we want? (For detection in the y axis)
+			var play = .1;
+
+			// I guess this is neccesary to get the current data
+			collisionObject.updateMatrix();
+
+			var vec = new THREE.Vector3();
+			var attribute = collisionObject.geometry.attributes.position; // we want the position data
+			for (var i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
+				vec.fromBufferAttribute(attribute, i); // extract the x,y,z coordinates
+				vec.applyMatrix4(collisionObject.matrix); // apply the mesh's matrix transform
+				if (Math.abs(y - vec.y) < play && Math.abs(vec.x) < 20 && Math.abs(vec.z) < 20) { // "20" keeps it more or less within bounds of the stage
+					var e = vec.clone();
+					e.o = collisionObject.pointColor;
+					intersectionals.push(e);
+				}
+			}
+		}
+
+		var cutSectionals; 
+		function winnowIntersectionals() {
+			var tolerance = 1;
+			var minPointsTogether = 3;
+
+			console.log('before: ' + intersectionals.length);
+
+			//Try to find each intersectional's nearest neighbor, and if that's larger than TOLERANCE, remove it
+			for (var i = 0; i < intersectionals.length; i++) {
+				var shortestDistance = Infinity;
+				var pointsUnderTolerance = 0;
+				intersectionals[i].d = 0;
+				for (var j = 0; j < intersectionals.length; j++) {
+					if (i === j)
+						continue;
+
+					var x1 = intersectionals[i].x;
+					var x2 = intersectionals[j].x;
+					var y1 = intersectionals[i].y;
+					var y2 = intersectionals[j].y;
+					var z1 = intersectionals[i].z;
+					var z2 = intersectionals[j].z;
+
+					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+
+					intersectionals[i].d += dist;
+
+					if (dist < shortestDistance) {
+						shortestDistance = dist;
+					}
+
+					if (dist < tolerance)
+						++pointsUnderTolerance;
+				}
+			}
+
+			// Now that we have an aggregate distance weight, let's get rid of any that are the furthest away
+			intersectionals.sort((a, b) => a.d - b.d);
+
+			// Keep the bottom 50%, subtract the bottom 5%
+			var toKeep = Math.round(intersectionals.length * .8);
+			var toCutout = Math.round(intersectionals.length * .2);
+			cutSectionals = intersectionals.slice(0, toCutout);
+			intersectionals.splice(toKeep, intersectionals.length - toKeep);
+
+
+
+			/*for (var i = 0; i < intersectionals.length; i++) {
+				if (intersectionals[i].d > 2000)
+					intersectionals.splice(i, 1);
+					//console.log('its ' + intersectionals[i].d);
+			}*/
+			//intersectionals = cutSectionals;
+			console.log('after: ' + intersectionals.length);
+		}
+
+		function roundAndRemoveDupes() {
+
+			// reduce to four significant digits
+			intersectionals.map(function (i) {
+				i.x = Math.round(i.x * 100) / 100;
+				i.y = Math.round(i.y * 100) / 100;
+				i.z = Math.round(i.z * 100) / 100;
+			});
+
+			// remove dupes
+			intersectionals = intersectionals.filter((thing, index, self) =>
+				index === self.findIndex((t) => (
+					t.x === thing.x && t.y === thing.y && t.z === thing.z
+				))
+			)
+		}
+
+		var intersectionalGroups = [];
+		function winnowIntersectionals2() {
+			var groupMinimumSize = 5;
+			var groupingThreshold = 10; // The max distance between any two points for them to be "grouped"
+			var maximumShortestDistance = 2; // The max distance from any other point above which we cull the point; in other words, how much of an outlier this point is
+
+			console.log('before: ' + intersectionals.length);
+
+			//1. Calculate delta D for all points P
+			for (var i = 0; i < intersectionals.length; i++) {
+				var shortestDistance = Infinity;
+				intersectionals[i].dt = 0;
+				for (var j = 0; j < intersectionals.length; j++) {
+					if (i === j)
+						continue;
+
+					var x1 = intersectionals[i].x;
+					var x2 = intersectionals[j].x;
+					var y1 = intersectionals[i].y;
+					var y2 = intersectionals[j].y;
+					var z1 = intersectionals[i].z;
+					var z2 = intersectionals[j].z;
+
+					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+
+					intersectionals[i].dt += dist;
+
+					if (dist < shortestDistance) {
+						shortestDistance = dist;
+					}
+				}
+				intersectionals[i].da = intersectionals[i].dt / intersectionals.length;
+				intersectionals[i].d = shortestDistance;
+			}
+
+			// Sort the result to have lowest delta D first
+			intersectionals.sort((a, b) => a.d - b.d);
+
+			//2. Take the point with lowest delta D as a starting point
+			var pointWithLowestDeltaD = intersectionals[0];
+
+			//3. Group with other nearby points
+			var intersectionalGroup = [];
+			intersectionalGroup.push(pointWithLowestDeltaD);
+			intersectionals.splice(0, 1);
+			for (var j = 0; j < intersectionals.length; j++) {
+
+					var x1 = pointWithLowestDeltaD.x;
+					var x2 = intersectionals[j].x;
+					var y1 = pointWithLowestDeltaD.y;
+					var y2 = intersectionals[j].y;
+					var z1 = pointWithLowestDeltaD.z;
+					var z2 = intersectionals[j].z;
+
+					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+
+					if (dist <= groupingThreshold) {
+						intersectionalGroup.push(intersectionals[j])
+						intersectionals.splice(j, 1);
+						--j;
+					}
+			}
+
+			if (intersectionalGroup.length > groupMinimumSize)
+				intersectionalGroups.push(intersectionalGroup);
+
+			console.log('after: ' + intersectionals.length + ' (' + intersectionalGroup.length + ' grouped)');
+			console.log('groups: ' + intersectionalGroups.length);
+			// If we still have some points that we haven't grouped yet, and they are under the maxDistance, then do all the above again, recursively
+			if (intersectionals.length > 0 && intersectionals[0].d < maximumShortestDistance)
+				winnowIntersectionals2();
+		}
+
+
+		var points = [];
+		function drawIntersectionals() {
+			if (points.length > 0) {
+				points.forEach(function (p) {
+					scene.remove(p);
+				});
+			}
+
+			var allIntersections = [].concat.apply([], intersectionalGroups);
+			// Group the points by color
+			console.log(allIntersections);
+			var pointsByStyle = groupBy(allIntersections, 'o');
+			console.log('hh');
+			console.log(pointsByStyle);
+			for (var key in pointsByStyle) {
+				console.log('h');
+				console.log(key);
+				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, alphaTest: 0.5 });
+				var pointsGeometry = new THREE.BufferGeometry().setFromPoints(pointsByStyle[key]);
+				var p = new THREE.Points(pointsGeometry, pointsMaterial);
+				points.push(p);
+				scene.add(p);
+			}
+
+			//remove ground
+			setTimeout(function () {
+				physicsWorld.removeRigidBody(ground[1]);
+				scene.remove(ground[1]);
+			}, 1000);
+
+			// recreate ground once thing has passed
+			setTimeout(function () {
+				pos.set(0, -1, 0);
+				quat.set(0, 0, 0, 1);
+				ground = createParalellepiped(40, 1, 40, 0, pos, quat, new THREE.MeshPhongMaterial({ color: 0xDDDDDD }));
+				ground[0].castShadow = false;
+				ground[0].receiveShadow = true;
+				ground[0].material.color.setHex(0x888888);
+
+				//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant*-1, 0));
+				//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant*-1, 0));
+
+			}, 3000);
+		}
+
+		//function solidifyIntersectionals() {
+		//	//Method one: convex geometry
+		//	var cmeshGeometry = new THREE.ConvexBufferGeometry(intersectionals);
+
+		//	var cmeshMaterial = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true });
+
+		//	//var cmesh = new THREE.Mesh(cmeshGeometry, cmeshMaterial);
+		//	//cmesh.renderOrder = 1;
+
+		//	setTimeout(function () {
+		//		scene.remove(theThing);
+		//		var thing = createSoftVolume(cmeshGeometry, 1, .1);
+		//		theThing = thing;
+
+		//	}, 5000);
+
+		//}
+		var frst = true;
+		var theOldThings;
+		function solidifyIntersectionals3() {
+			// Remove the old things
+			theOldThings = theThings;
+			setTimeout(function () {
+				theOldThings.forEach(function (t) {
+					scene.remove(t);
+					physicsWorld.removeSoftBody(t.userData.physicsBody);
+				});
+			}, 3000);
+
+			theThings = [];
+
+			// Create the new things
+			var geometries = [];
+			intersectionalGroups.forEach(function (g) {
+				console.log('solidifying...');
+				console.log(g);
+
+				//Method one: convex geometry
+				var cmeshGeometry = new THREE.ConvexBufferGeometry(g);
+				var cmeshMaterial = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true });
+				var cmesh = new THREE.Mesh(cmeshGeometry, cmeshMaterial);
+			
+				//cmesh.position.set(0, 30, 0);
+				cmesh.position.y = 30;
+				//mesh.rotation.set(.5, 0, 0);
+
+				// apply the transform
+				cmesh.updateMatrix();
+				cmesh.geometry.applyMatrix(cmesh.matrix);
+
+				THREE.BufferGeometryUtils.mergeVertices(cmeshGeometry);
+
+				geometries.push(cmeshGeometry);
+			});
+
+			// wait for the thing to pass below the stage and recreate it
+			setTimeout(function () {
+				geometries.forEach(function (g) {
+					var thing = createSoftVolume(g, 111, .1);
+					theThings.push(thing);
+					console.log('added thing');
+				});
+
+				createEye(theThings[0]);
+			}, 2000);
+
+			//reset everyting
+			setTimeout(function () {
+				console.log('resetting');
+				intersectionals = [];
+				intersectionalGroups = [];
+				tcollision = false;
+				physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
+				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+				frst = true;
+
+			}, 2100);
+		}
+
+		//function solidifyIntersectionals2() {
+		//	//Method two: Manual arrangment
+
+		//	// Sort into quadrants
+		//	for (var i = 0; i < intersectionals.length; i++) {
+		//		intersectionals[i].rad = Math.atan2(intersectionals[i].z, intersectionals[i].x);
+		//	}
+
+		//	//intersectionals.sort((a, b) => b.y - a.y);
+
+		//	// Dirty thing: turn the vecsBelow into a typed array
+		//	var t = new Float32Array(intersectionals.length * 3);
+		//	for (var i = 0; i < t.length; i += 3) {
+		//		t[i] = intersectionals[i / 3].x;
+		//		t[i + 1] = intersectionals[i / 3].y;
+		//		//t[i + 1] = y;
+		//		t[i + 2] = intersectionals[i / 3].z;
+		//	}
+
+		//	var rgeometry = new THREE.BufferGeometry();
+		//	rgeometry.addAttribute('position', new THREE.BufferAttribute(t, 3));
+		//	THREE.BufferGeometryUtils.mergeVertices(rgeometry);
+		//	rgeometry.computeFaceNormals();
+		//	rgeometry.computeVertexNormals();
+
+		//	var rmaterial = new THREE.MeshLambertMaterial({ color: 0xffff00, opacity: 0.9, transparent: true });
+		//	var rmesh = new THREE.Mesh(rgeometry, rmaterial);
+		//	//scene.add(rmesh);
+		//	console.log(rmesh);
+
+		//	setTimeout(function () {
+		//		scene.remove(theThing);
+		//		var thing = createSoftVolume(rgeometry, 9, 40);
+		//		theThing = thing;
+		//	}, 5000);
+
+		//}
+
+		var fr = 1;
+		function animate() {
+
+			requestAnimationFrame(animate);
+
+			render();
+
+			// Mark any intersecting points
+			if (fr++ % 3 == 0) {
+				fr = 1;
+				if (intersectionals !== null) {
+					if (intersectionals.length < 2000) {
+						theThings.forEach(function (t) {
+							trackIntersectingPoints(t, 3);
+						});
+						eye.forEach(function (t) {
+							trackIntersectingPoints(t, 1);
+						});
+					} else {
+						roundAndRemoveDupes();
+						winnowIntersectionals2();
+						drawIntersectionals();
+						solidifyIntersectionals3();
+						intersectionals = null;
+					}
+				}
+			}
+
+			stats.update();
+
+		}
+
+		function render() {
+
+			var deltaTime = clock.getDelta();
+
+			// Make thing face camera
+			for (var i = 0, il = cameraFacingThings.length; i < il; i++) {
+				cameraFacingThings[i].lookAt(camera.position);
+			}
+
+
+			updatePhysics(deltaTime);
+
+			processClick();
+
+			// the below add shaders
+			renderer.render(scene, camera);
+			//composer.render( deltaTime );
+
+		}
+
+		function updatePhysics(deltaTime) {
+
+			// Step world
+			physicsWorld.stepSimulation(deltaTime, 10);
+
+			// Update soft volumes
+			for (var i = 0, il = softBodies.length; i < il; i++) {
+
+				var volume = softBodies[i];
+				var geometry = volume.geometry;
+				var softBody = volume.userData.physicsBody;
+				var volumePositions = geometry.attributes.position.array;
+				var volumeNormals = geometry.attributes.normal.array;
+				var association = geometry.ammoIndexAssociation;
+				var numVerts = association.length;
+				var nodes = softBody.get_m_nodes();
+				for (var j = 0; j < numVerts; j++) {
+
+					var node = nodes.at(j);
+					var nodePos = node.get_m_x();
+					var x = nodePos.x();
+					var y = nodePos.y();
+					var z = nodePos.z();
+					var nodeNormal = node.get_m_n();
+					var nx = nodeNormal.x();
+					var ny = nodeNormal.y();
+					var nz = nodeNormal.z();
+
+					var assocVertex = association[j];
+
+					for (var k = 0, kl = assocVertex.length; k < kl; k++) {
+
+						var indexVertex = assocVertex[k];
+						volumePositions[indexVertex] = x;
+						volumeNormals[indexVertex] = nx;
+						indexVertex++;
+						volumePositions[indexVertex] = y;
+						volumeNormals[indexVertex] = ny;
+						indexVertex++;
+						volumePositions[indexVertex] = z;
+						volumeNormals[indexVertex] = nz;
+
+					}
+
+				}
+
+				geometry.attributes.position.needsUpdate = true;
+				geometry.attributes.normal.needsUpdate = true;
+
+			}
+
+			// Update rigid bodies
+			for (var i = 0, il = rigidBodies.length; i < il; i++) {
+
+				var objThree = rigidBodies[i];
+				var objPhys = objThree.userData.physicsBody;
+				var ms = objPhys.getMotionState();
+				if (ms) {
+
+					ms.getWorldTransform(transformAux1);
+					var p = transformAux1.getOrigin();
+					var q = transformAux1.getRotation();
+					objThree.position.set(p.x(), p.y(), p.z());
+					objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+
+				}
+
+			}
+
+		}
+
+	</script>
+
+</body>
+</html>
