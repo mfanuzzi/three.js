@@ -47,6 +47,7 @@
 	<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
 
 	<script src="js/geometries/ConvexGeometry.js"></script>
+	<script src="js/math/ConvexHull.js"></script>
 	<script src="js/QuickHull.js"></script>
 
 	<script src="js/modifiers/SimplifyModifier.js"></script>
@@ -58,9 +59,9 @@
 
 	<script>
 
-		if (WEBGL.isWebGLAvailable() === false) {
+		if (THREE.WEBGL.isWebGLAvailable() === false) {
 
-			document.body.appendChild(WEBGL.getWebGLErrorMessage());
+			document.body.appendChild(THREE.WEBGL.getWebGLErrorMessage());
 			document.getElementById('container').innerHTML = "";
 
 		}
@@ -91,7 +92,7 @@
 		var collidableMeshList = [];
 		var theThings = [];
 		var ground;
-		var eye = [null,null];
+		var eye = [null, null];
 
 		var intersectionals = [];
 
@@ -137,9 +138,10 @@
 			scene = new THREE.Scene();
 			scene.background = new THREE.Color(0xffffff);
 
-			camera.position.set(40, 2, 0);
-			camera.rotation.order = 'YXZ';
-			camera.rotation.x = -1.5;
+			camera.position.set(-4, 40, 10);
+			//camera.rotation.set()
+			//camera.rotation.order = 'YXZ';
+			//camera.rotation.x = -1.5;
 
 			renderer = new THREE.WebGLRenderer();
 			renderer.setPixelRatio(window.devicePixelRatio);
@@ -148,8 +150,10 @@
 			container.appendChild(renderer.domElement);
 
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
-			controls.target.set(0, 20, 0);
+			controls.target.set(0, -10, 0);
 			controls.update();
+			controls.enabled = false;
+
 
 			textureLoader = new THREE.TextureLoader();
 
@@ -251,8 +255,9 @@
 				iquat.set(0, 0, 0, 1);
 
 				if (meshToTarget) {
-					meshToTarget.geometry.computeBoundingBox();   
-					var center = meshToTarget.geometry.boundingBox.getCenter();
+					meshToTarget.geometry.computeBoundingBox();
+					var center = new THREE.Vector3();
+					meshToTarget.geometry.boundingBox.getCenter(center);
 					meshToTarget.localToWorld(center);
 					ipos = center;
 					ipos.y = 35;
@@ -266,7 +271,7 @@
 				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
 				eyeBody.setFriction(0.9);
 			}
-		
+
 			//cameraFacingThings.push(eyeBody);
 		}
 
@@ -617,8 +622,8 @@
 						tcollision = true;
 						console.log('xxx');
 						window.dispatchEvent(new Event('collision'));
-						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant/3, 0));
-						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant/3, 0));
+						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 					}
 				}
 				// capture current position of all tracked points
@@ -651,7 +656,7 @@
 			}
 		}
 
-		var cutSectionals; 
+		var cutSectionals;
 		function winnowIntersectionals() {
 			var tolerance = 1;
 			var minPointsTogether = 3;
@@ -771,20 +776,20 @@
 			intersectionals.splice(0, 1);
 			for (var j = 0; j < intersectionals.length; j++) {
 
-					var x1 = pointWithLowestDeltaD.x;
-					var x2 = intersectionals[j].x;
-					var y1 = pointWithLowestDeltaD.y;
-					var y2 = intersectionals[j].y;
-					var z1 = pointWithLowestDeltaD.z;
-					var z2 = intersectionals[j].z;
+				var x1 = pointWithLowestDeltaD.x;
+				var x2 = intersectionals[j].x;
+				var y1 = pointWithLowestDeltaD.y;
+				var y2 = intersectionals[j].y;
+				var z1 = pointWithLowestDeltaD.z;
+				var z2 = intersectionals[j].z;
 
-					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+				var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
 
-					if (dist <= groupingThreshold) {
-						intersectionalGroup.push(intersectionals[j])
-						intersectionals.splice(j, 1);
-						--j;
-					}
+				if (dist <= groupingThreshold) {
+					intersectionalGroup.push(intersectionals[j])
+					intersectionals.splice(j, 1);
+					--j;
+				}
 			}
 
 			if (intersectionalGroup.length > groupMinimumSize)
@@ -884,7 +889,7 @@
 				var cmeshGeometry = new THREE.ConvexBufferGeometry(g);
 				var cmeshMaterial = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true });
 				var cmesh = new THREE.Mesh(cmeshGeometry, cmeshMaterial);
-			
+
 				//cmesh.position.set(0, 30, 0);
 				cmesh.position.y = 30;
 				//mesh.rotation.set(.5, 0, 0);
