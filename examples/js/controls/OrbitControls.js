@@ -90,6 +90,16 @@ THREE.OrbitControls = function ( object, domElement ) {
 	// public methods
 	//
 
+	this.rotateL = function (degrees) {
+		rotateLeft(degrees);
+		this.update();
+	}
+
+	this.rotateU = function (degrees) {
+		rotateUp(degrees);
+		this.update();
+	}
+
 	this.getPolarAngle = function () {
 
 		return spherical.phi;

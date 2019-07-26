@@ -96,6 +96,48 @@
 
 		var intersectionals = [];
 
+		var startingAzimuth = 0;
+
+		var lastX = 0;
+		var lastY = 0;
+		function handleOrientation(event) {
+			console.log('wo');
+
+			// Range of beta/gamma is -180 to 180
+			var x = event.gamma;  // In degree in the range [-180,180] -- up/down
+			var y = event.beta; // In degree in the range [-90,90] -- left/right
+
+			//output.innerHTML  = "beta : " + x + "\n";
+			//output.innerHTML += "gamma: " + y + "\n";
+
+			// Because we don't want to have the device upside down
+			// We constrain the x value to the range [-90,90]
+			if (x >  90) { x =  90};
+			if (x < -90) { x = -90};
+			if (y >  90) { y =  90};
+			if (y < -90) { y = -90};
+
+			x = x * (Math.PI / 180);
+			y = y * (Math.PI / 180);
+
+			var diff = Math.abs(lastX) - Math.abs(x);
+			if (x < 0)
+				controls.rotateL(-diff);
+			else
+				controls.rotateL(diff);
+
+			var diff = Math.abs(lastY) - Math.abs(y);
+			if (y < 0)
+				controls.rotateU(-diff);
+			else
+				controls.rotateU(diff);
+
+			lastX = x;
+			lastY = y;
+		}
+
+		window.addEventListener('deviceorientation', handleOrientation);
+
 		Ammo().then(function (AmmoLib) {
 
 			Ammo = AmmoLib;
@@ -152,7 +194,10 @@
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.target.set(0, -10, 0);
 			controls.update();
-			controls.enabled = false;
+			startingAzimuth = controls.getAzimuthalAngle();
+			//controls.enabled = false;
+			controls.enableZoom = true;
+			controls.enablePan = false;
 
 
 			textureLoader = new THREE.TextureLoader();
@@ -557,27 +602,41 @@
 
 			if (clickRequest) {
 
-				raycaster.setFromCamera(mouseCoords, camera);
+				var azimuthDiff = startingAzimuth - controls.getAzimuthalAngle();
+				console.log(azimuthDiff);
 
-				// Creates a ball
-				var ballMass = 3;
-				var ballRadius = 0.4;
+				// So, the Y gravity will remain as-is. But X and Z will change with angle.
+				var xGrav = (azimuthDiff * 3);
+				var zGrav = 1;
 
-				ball = new THREE.Mesh(new THREE.SphereBufferGeometry(ballRadius, 18, 16), ballMaterial);
-				ball.castShadow = true;
-				ball.receiveShadow = true;
+				console.log(camera.position);
+				xGrav = camera.position.x / -10;
+				zGrav = camera.position.z / -10;
 
-				var ballShape = new Ammo.btSphereShape(ballRadius);
-				ballShape.setMargin(margin);
-				pos.copy(raycaster.ray.direction);
-				pos.add(raycaster.ray.origin);
-				quat.set(0, 0, 0, 1);
-				var ballBody = createRigidBody(ball, ballShape, ballMass, pos, quat);
-				ballBody.setFriction(0.5);
+				physicsWorld.setGravity(new Ammo.btVector3(xGrav, gravityConstant, zGrav));
+				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(xGrav, gravityConstant, zGrav));
 
-				pos.copy(raycaster.ray.direction);
-				pos.multiplyScalar(14);
-				ballBody.setLinearVelocity(new Ammo.btVector3(pos.x, pos.y, pos.z));
+				//raycaster.setFromCamera(mouseCoords, camera);
+
+				//// Creates a ball
+				//var ballMass = 3;
+				//var ballRadius = 0.4;
+
+				//ball = new THREE.Mesh(new THREE.SphereBufferGeometry(ballRadius, 18, 16), ballMaterial);
+				//ball.castShadow = true;
+				//ball.receiveShadow = true;
+
+				//var ballShape = new Ammo.btSphereShape(ballRadius);
+				//ballShape.setMargin(margin);
+				//pos.copy(raycaster.ray.direction);
+				//pos.add(raycaster.ray.origin);
+				//quat.set(0, 0, 0, 1);
+				//var ballBody = createRigidBody(ball, ballShape, ballMass, pos, quat);
+				//ballBody.setFriction(0.5);
+
+				//pos.copy(raycaster.ray.direction);
+				//pos.multiplyScalar(14);
+				//ballBody.setLinearVelocity(new Ammo.btVector3(pos.x, pos.y, pos.z));
 
 				clickRequest = false;
 
@@ -622,8 +681,9 @@
 						tcollision = true;
 						console.log('xxx');
 						window.dispatchEvent(new Event('collision'));
-						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
-						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+						//// undo this
+						//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+						//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 					}
 				}
 				// capture current position of all tracked points
@@ -920,8 +980,9 @@
 				intersectionals = [];
 				intersectionalGroups = [];
 				tcollision = false;
-				physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
-				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+				//// undo this
+				//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
+				//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
 				frst = true;
 
 			}, 2100);
