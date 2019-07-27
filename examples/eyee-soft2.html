@@ -96,7 +96,7 @@
 		var collidableMeshList = [];
 		var theThings = [];
 		var ground;
-		var eye = [null, null];
+		var eye = [null, null, null, null];
 
 		var intersectionals = [];
 
@@ -356,6 +356,20 @@
 			// Create rigid eye
 			var eyeMass = 1;
 			var eyeRadius = 2;
+
+			// remove last round's old eyes
+			if (eye[2] !== null && eye[3] !== null) {
+				scene.remove(eye[2]);
+				scene.remove(eye[3]);
+				physicsWorld.removeRigidBody(eye[2].userData.physicsBody);
+				physicsWorld.removeRigidBody(eye[3].userData.physicsBody);
+				rigidBodies.splice(rigidBodies.indexOf(eye[2]), 1);
+				rigidBodies.splice(rigidBodies.indexOf(eye[3]), 1);
+			}
+
+			// save old eyes
+			eye[3] = eye[1];
+			eye[2] = eye[0];
 
 			for (var i = 0; i < 2; i++) {
 				eye[i] = new THREE.Mesh(new THREE.SphereBufferGeometry(eyeRadius, 24, 10), new THREE.MeshPhongMaterial({ color: 0xFFFFFF }));
@@ -1164,9 +1178,9 @@
 						theThings.forEach(function (t) {
 							trackIntersectingPoints(t, 3);
 						});
-						eye.forEach(function (t) {
-							trackIntersectingPoints(t, 1);
-						});
+						for (var t = 0; t < 2; t++) {
+							trackIntersectingPoints(eye[t], 1);
+						}
 					} else {
 						roundAndRemoveDupes();
 						winnowIntersectionals2();
