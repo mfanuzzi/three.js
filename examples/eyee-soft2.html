@@ -922,6 +922,7 @@
 					scene.remove(p);
 				});
 			}
+			points = [];
 
 			var allIntersections = [].concat.apply([], intersectionalGroups);
 			// Group the points by color
@@ -932,7 +933,7 @@
 			for (var key in pointsByStyle) {
 				console.log('h');
 				console.log(key);
-				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, alphaTest: 0.5 });
+				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, sizeAttenuation: true, alphaTest: 0.3 });
 				var pointsGeometry = new THREE.BufferGeometry().setFromPoints(pointsByStyle[key]);
 				var p = new THREE.Points(pointsGeometry, pointsMaterial);
 				points.push(p);
@@ -1044,6 +1045,16 @@
 			}, 2100);
 		}
 
+		function dripPoints() {
+			points.forEach(function (p) {
+				p.position.y -= .05;
+				p.scale.z += .002;
+				p.scale.x += .002;
+				p.updateMatrix();
+				p.material.size += .005;
+			});
+		}
+
 		//function solidifyIntersectionals2() {
 		//	//Method two: Manual arrangment
 
@@ -1083,6 +1094,7 @@
 		//}
 
 		var fr = 1;
+		var tw = 0;
 		function animate() {
 
 			requestAnimationFrame(animate);
@@ -1105,8 +1117,13 @@
 						winnowIntersectionals2();
 						drawIntersectionals();
 						solidifyIntersectionals3();
+						tw = 1000;
 						intersectionals = null;
 					}
+				}
+				if (points.length > 0 && tw > 0) {
+					dripPoints();
+					--tw;
 				}
 			}
 
