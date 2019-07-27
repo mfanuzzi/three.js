@@ -57,6 +57,8 @@
 
 	<script src="rayintersect.js"></script>
 
+	<script src="js/tone.js"></script>
+
 	<script>
 
 		if (THREE.WEBGL.isWebGLAvailable() === false) {
@@ -80,6 +82,8 @@
 
 		// Physics variables
 		var gravityConstant = -13;
+		var gravX = 0;
+		var gravZ = 0;
 		var physicsWorld;
 		var rigidBodies = [];
 		var softBodies = [];
@@ -112,10 +116,10 @@
 
 			// Because we don't want to have the device upside down
 			// We constrain the x value to the range [-90,90]
-			if (x >  90) { x =  90};
-			if (x < -90) { x = -90};
-			if (y >  90) { y =  90};
-			if (y < -90) { y = -90};
+			if (x > 90) { x = 90 };
+			if (x < -90) { x = -90 };
+			if (y > 90) { y = 90 };
+			if (y < -90) { y = -90 };
 
 			x = x * (Math.PI / 180);
 			y = y * (Math.PI / 180);
@@ -136,7 +140,32 @@
 			lastY = y;
 		}
 
+		const notemap = [
+			['F3','F#3','G3','G#3','A4','A#4'],
+			['E3','D#2','E2','F2','F#2','B4'],
+			['D#3','D2','A2','A#2','G2','C4'],
+			['D3','C#2','C2','B2','G#2','C#4'],
+			['C#3','C3','B3','A#3','A3','D4'],
+			['G#4','G4','F#4','F4','E4','D#4']
+		];
+		var synth;
+		function handleCollision(event) {
+			//transpose the x,z range of [-40,40] into a 6x6 grid with coords -3,3
+			var eX = Math.round(((event.detail.at.x) / 40) * 3);
+			var eZ = Math.round(((event.detail.at.z) / 40) * 3);
+
+			eX += 3;
+			eZ += 3;
+
+			console.log(eX + ',' + eZ);
+
+			synth.triggerAttackRelease(notemap[eX][eZ], '4s')
+		}
+
 		window.addEventListener('deviceorientation', handleOrientation);
+
+		window.addEventListener('collision', handleCollision);
+
 
 		Ammo().then(function (AmmoLib) {
 
@@ -168,6 +197,7 @@
 
 			initInput();
 
+			synth = new Tone.PolySynth(5, Tone.Synth).toMaster();
 		}
 
 		function initGraphics() {
@@ -367,6 +397,12 @@
 
 			});
 			*/
+			// create fake walls
+
+			//createParalellepiped(40, 40, 1, 0, new THREE.Vector3(0, 30, -25), quat, new THREE.MeshPhongMaterial({ color: 0x333333 }));
+
+
+
 			createEye();
 			pos.y = 25;
 			quat.set(0, 0, 0, 1);
@@ -606,15 +642,21 @@
 				console.log(azimuthDiff);
 
 				// So, the Y gravity will remain as-is. But X and Z will change with angle.
-				var xGrav = (azimuthDiff * 3);
-				var zGrav = 1;
+				gravX = (azimuthDiff * 3);
+				gravZ = 1;
 
 				console.log(camera.position);
-				xGrav = camera.position.x / -10;
-				zGrav = camera.position.z / -10;
+				gravX = camera.position.x / -10;
+				gravZ = camera.position.z / -10;
 
-				physicsWorld.setGravity(new Ammo.btVector3(xGrav, gravityConstant, zGrav));
-				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(xGrav, gravityConstant, zGrav));
+				// Limit sideways gravitation to +/- 5.
+				if (gravX < -5) gravx = -3;
+				if (gravX > 5) gravx = 3;
+				if (gravZ < -5) gravz = -3;
+				if (gravZ > 5) gravz = 3;
+
+				physicsWorld.setGravity(new Ammo.btVector3(gravX, gravityConstant, gravZ));
+				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(gravX, gravityConstant, gravZ));
 
 				//raycaster.setFromCamera(mouseCoords, camera);
 
@@ -659,6 +701,9 @@
 			// How much of a margin do we want?
 			var play = .1;
 
+			if (collisionObject.hasOwnProperty('collided') == false)
+				collisionObject.collided = false;
+
 			// I guess this is neccesary to get the current data
 			collisionObject.updateMatrix();
 
@@ -677,13 +722,20 @@
 					if (collisionObject.trackedPointIndicies.includes(i) === false) {
 						collisionObject.trackedPointIndicies.push(i);
 					}
+					//emit event if this is the first of any to collide
 					if (tcollision === false) {
 						tcollision = true;
 						console.log('xxx');
-						window.dispatchEvent(new Event('collision'));
+						//window.dispatchEvent(new Event('collision'));
 						//// undo this
 						//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 						//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+					}
+					//now track this particular one
+					if (collisionObject.collided === false) {
+						collisionObject.collided = true;
+						//console.log('new thing hit at ' + vec.x + ' ' + vec.z);
+						window.dispatchEvent(new CustomEvent('collision', { detail: { co: collisionObject, at: vec } }));
 					}
 				}
 				// capture current position of all tracked points
@@ -721,7 +773,7 @@
 			var tolerance = 1;
 			var minPointsTogether = 3;
 
-			console.log('before: ' + intersectionals.length);
+			//console.log('before: ' + intersectionals.length);
 
 			//Try to find each intersectional's nearest neighbor, and if that's larger than TOLERANCE, remove it
 			for (var i = 0; i < intersectionals.length; i++) {
@@ -769,7 +821,7 @@
 					//console.log('its ' + intersectionals[i].d);
 			}*/
 			//intersectionals = cutSectionals;
-			console.log('after: ' + intersectionals.length);
+			//console.log('after: ' + intersectionals.length);
 		}
 
 		function roundAndRemoveDupes() {
@@ -795,7 +847,7 @@
 			var groupingThreshold = 10; // The max distance between any two points for them to be "grouped"
 			var maximumShortestDistance = 2; // The max distance from any other point above which we cull the point; in other words, how much of an outlier this point is
 
-			console.log('before: ' + intersectionals.length);
+			//console.log('before: ' + intersectionals.length);
 
 			//1. Calculate delta D for all points P
 			for (var i = 0; i < intersectionals.length; i++) {
@@ -855,8 +907,8 @@
 			if (intersectionalGroup.length > groupMinimumSize)
 				intersectionalGroups.push(intersectionalGroup);
 
-			console.log('after: ' + intersectionals.length + ' (' + intersectionalGroup.length + ' grouped)');
-			console.log('groups: ' + intersectionalGroups.length);
+			//console.log('after: ' + intersectionals.length + ' (' + intersectionalGroup.length + ' grouped)');
+			//console.log('groups: ' + intersectionalGroups.length);
 			// If we still have some points that we haven't grouped yet, and they are under the maxDistance, then do all the above again, recursively
 			if (intersectionals.length > 0 && intersectionals[0].d < maximumShortestDistance)
 				winnowIntersectionals2();
@@ -873,10 +925,10 @@
 
 			var allIntersections = [].concat.apply([], intersectionalGroups);
 			// Group the points by color
-			console.log(allIntersections);
+			//console.log(allIntersections);
 			var pointsByStyle = groupBy(allIntersections, 'o');
-			console.log('hh');
-			console.log(pointsByStyle);
+			//console.log('hh');
+			//console.log(pointsByStyle);
 			for (var key in pointsByStyle) {
 				console.log('h');
 				console.log(key);
@@ -943,7 +995,7 @@
 			var geometries = [];
 			intersectionalGroups.forEach(function (g) {
 				console.log('solidifying...');
-				console.log(g);
+				//console.log(g);
 
 				//Method one: convex geometry
 				var cmeshGeometry = new THREE.ConvexBufferGeometry(g);
@@ -953,6 +1005,10 @@
 				//cmesh.position.set(0, 30, 0);
 				cmesh.position.y = 30;
 				//mesh.rotation.set(.5, 0, 0);
+
+				// offset the new thing to account for any sideways gravitational forces
+				cmesh.position.x -= gravX * 3;
+				cmesh.position.z -= gravZ * 3;
 
 				// apply the transform
 				cmesh.updateMatrix();
