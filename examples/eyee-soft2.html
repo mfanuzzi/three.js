@@ -191,8 +191,8 @@
 			eX += 2; //2 instead of 3 because zero-based array
 			eZ += 2;
 
-			if (eX > nmap.length) eX = nmap.length;
-			if (eZ > nmap.length) eZ = nmap.length;
+			if (eX > nmap.length - 1) eX = nmap.length - 1;
+			if (eZ > nmap.length - 1) eZ = nmap.length - 1;
 			if (eX < 0) eX = 0;
 			if (eZ < 0) eZ = 0;
 
@@ -488,7 +488,7 @@
 				mesh.position.set(2, 30, 0);
 				//mesh.position.y = 30;
 				mesh.scale.set(5, 5, 5);
-				mesh.rotation.set(.5, 0, 0);
+				mesh.rotation.set(1, 0, 0);
 
 				// apply the transform
 				mesh.updateMatrix();
@@ -794,8 +794,8 @@
 						console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
 						//// undo this
-						//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
-						//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
+						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
 					}
 					//now track this particular one
 					if (collisionObject.collided === false) {
@@ -999,7 +999,7 @@
 			for (var key in pointsByStyle) {
 				console.log('h');
 				console.log(key);
-				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, sizeAttenuation: true, alphaTest: 0.3 });
+				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .4, sizeAttenuation: true, alphaTest: 0.3 });
 				var pointsGeometry = new THREE.BufferGeometry().setFromPoints(pointsByStyle[key]);
 				var p = new THREE.Points(pointsGeometry, pointsMaterial);
 				points.push(p);
@@ -1054,7 +1054,7 @@
 					scene.remove(t);
 					physicsWorld.removeSoftBody(t.userData.physicsBody);
 				});
-			}, 3000);
+			}, 5000);
 
 			theThings = [];
 
@@ -1098,7 +1098,7 @@
 				});
 
 				createEye(theThings[0]);
-			}, 2000);
+			}, 4000);
 
 			//reset everyting
 			setTimeout(function () {
@@ -1107,11 +1107,11 @@
 				intersectionalGroups = [];
 				tcollision = false;
 				//// undo this
-				//physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
-				//physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+				physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
+				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
 				frst = true;
 
-			}, 2100);
+			}, 4100);
 		}
 
 		function dripPoints() {
@@ -1216,7 +1216,7 @@
 
 			// the below add shaders
 			renderer.render(scene, camera);
-			composer.render( deltaTime );
+			//composer.render( deltaTime );
 
 		}
 
