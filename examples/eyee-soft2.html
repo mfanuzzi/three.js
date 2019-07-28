@@ -40,11 +40,13 @@
 	<script src="js/postprocessing/RenderPass.js"></script>
 	<script src="js/postprocessing/ShaderPass.js"></script>
 	<script src="js/postprocessing/HalftonePass.js"></script>
+	<script src="js/postprocessing/AfterimagePass.js"></script>
 
 	<script src="js/shaders/CopyShader.js"></script>
 	<script src="js/shaders/HalftoneShader.js"></script>
 	<script src="js/shaders/DepthLimitedBlurShader.js"></script>
 	<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
+	<script src="js/shaders/AfterimageShader.js"></script>
 
 	<script src="js/geometries/ConvexGeometry.js"></script>
 	<script src="js/math/ConvexHull.js"></script>
@@ -101,6 +103,8 @@
 		var intersectionals = [];
 
 		var startingAzimuth = 0;
+
+		var collisionCount = 0;
 
 		var lastX = 0;
 		var lastY = 0;
@@ -162,29 +166,31 @@
 
 		//v3: chromatic at edges, Fmaj7 center, minor filling
 		const notemap = [
-			['A3','A#3','B3','C3','C#3','D3'],
-			['E3','G4','D4','A4','E4','D#3'],
-			['D#','C4','E5','F5','B4','E3'],
-			['D3','F4','C5','A5','F#4','F3'],
-			['C#3','A#4','D#4','G#4','C#4','F#3'],
-			['C3','B3','A#3','A3','G#3','G3']
+			['A3', 'A#3', 'B3', 'C3', 'C#3', 'D3'],
+			['E3', 'G4', 'D4', 'A4', 'E4', 'D#3'],
+			['D#', 'C4', 'E5', 'F5', 'B4', 'E3'],
+			['D3', 'F4', 'C5', 'A5', 'F#4', 'F3'],
+			['C#3', 'A#4', 'D#4', 'G#4', 'C#4', 'F#3'],
+			['C3', 'B3', 'A#3', 'A3', 'G#3', 'G3']
 		];
 		const notemaphi = [
-			['A7','A#7','B7','C7','C#7','D7'],
-			['E7','G6','D6','A6','E6','D#7'],
-			['D#','C6','E7','F7','B6','E7'],
-			['D7','F6','C7','A7','F#6','F7'],
-			['C#7','A#6','D#6','G#6','C#6','F#7'],
-			['C7','B7','A#7','A7','G#7','G7']
+			['A7', 'A#7', 'B7', 'C7', 'C#7', 'D7'],
+			['E7', 'G6', 'D6', 'A6', 'E6', 'D#7'],
+			['D#', 'C6', 'E7', 'F7', 'B6', 'E7'],
+			['D7', 'F6', 'C7', 'A7', 'F#6', 'F7'],
+			['C#7', 'A#6', 'D#6', 'G#6', 'C#6', 'F#7'],
+			['C7', 'B7', 'A#7', 'A7', 'G#7', 'G7']
 		];
 
 
 		var synth;
 		function handleCollision(event) {
-			playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, .8, true, synth);
+			if (Math.ceil(collisionCount / 10) % 2 == 0) {
+				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, (collisionCount % 10) / 10, true, synth, 4);
+			}
 		}
 
-		function playNoteFromXZ(x, z, nmap, velocity, detune, syn) {
+		function playNoteFromXZ(x, z, nmap, velocity, detune, syn, sec) {
 			var eX = Math.round((x / 20) * 3);
 			var eZ = Math.round((z / 20) * 3);
 
@@ -199,12 +205,12 @@
 			console.log(eX + ',' + eZ + ' from ' + x + ',' + z);
 
 			syn.set("detune", 0);
-			syn.triggerAttackRelease(nmap[eX][eZ], '4s', null, velocity);
+			syn.triggerAttackRelease(nmap[eX][eZ], sec + 's', null, velocity);
 
 			if (detune === true) {
 				setTimeout(function () {
 					syn.set("detune", -1000, 10);
-				}, 1500);
+				}, 2000);
 			}
 		}
 
@@ -260,7 +266,7 @@
 			scene = new THREE.Scene();
 			scene.background = new THREE.Color(0xffffff);
 
-			camera.position.set(-4, 40, 10);
+			camera.position.set(-4, 70, 10);
 			//camera.rotation.set()
 			//camera.rotation.order = 'YXZ';
 			//camera.rotation.x = -1.5;
@@ -285,8 +291,8 @@
 			var ambientLight = new THREE.AmbientLight(0xaaaaaa);
 			scene.add(ambientLight);
 
-			var light = new THREE.DirectionalLight(0xffffff, 3); //light intensity
-			light.position.set(- 10, 10, 5);
+			var light = new THREE.DirectionalLight(0xffffff, 10); //light intensity
+			light.position.set(- 10, 30, 5);
 			light.castShadow = true;
 			var d = 20;
 			light.shadow.camera.left = - d;
@@ -313,22 +319,23 @@
 			// post-processing
 			composer = new THREE.EffectComposer(renderer);
 			renderPass = new THREE.RenderPass(scene, camera);
-			params = {
-				shape: 1,
-				radius: 3,
-				rotateR: Math.PI / 12,
-				rotateB: Math.PI / 12 * 2,
-				rotateG: Math.PI / 12 * 3,
-				scatter: 0,
-				blending: 1,
-				blendingMode: 1,
-				greyscale: true,
-				disable: false
-			};
-			halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
+			//params = {
+			//	shape: 1,
+			//	radius: 3,
+			//	rotateR: Math.PI / 12,
+			//	rotateB: Math.PI / 12 * 2,
+			//	rotateG: Math.PI / 12 * 3,
+			//	scatter: 0,
+			//	blending: 1,
+			//	blendingMode: 1,
+			//	greyscale: true,
+			//	disable: false
+			//};
+			//halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
 			composer.addPass(renderPass);
-			composer.addPass(halftonePass);
-
+			//composer.addPass(halftonePass);
+			afterimagePass = new THREE.AfterimagePass();
+			composer.addPass(afterimagePass);
 
 
 
@@ -399,7 +406,7 @@
 					meshToTarget.geometry.boundingBox.getCenter(center);
 					meshToTarget.localToWorld(center);
 					ipos = center;
-					ipos.y = 35;
+					ipos.y = 95;
 				}
 
 				// space out the second eye
@@ -410,7 +417,7 @@
 				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
 				eyeBody.setFriction(0.9);
 
-				playNoteFromXZ(ipos.x, ipos.z, notemaphi, 0.1, false, synth2);
+				playNoteFromXZ(ipos.x, ipos.z, notemaphi, 0.1, false, synth2, 8);
 			}
 
 			//cameraFacingThings.push(eyeBody);
@@ -485,7 +492,7 @@
 
 
 				mesh = gltf.scene.children[2];
-				mesh.position.set(2, 30, 0);
+				mesh.position.set(2, 60, 0);
 				//mesh.position.y = 30;
 				mesh.scale.set(5, 5, 5);
 				mesh.rotation.set(1, 0, 0);
@@ -576,8 +583,9 @@
 		function createSoftVolume(bufferGeom, mass, pressure) {
 
 			processGeometry(bufferGeom);
-
-			var volume = new THREE.Mesh(bufferGeom, new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true }));
+			var volumeMat = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true }); //old
+			//var volumeMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, shininess : 100 });
+			var volume = new THREE.Mesh(bufferGeom, volumeMat);
 			volume.castShadow = true;
 			volume.receiveShadow = true;
 			volume.frustumCulled = false;
@@ -628,7 +636,7 @@
 
 			softBodies.push(volume);
 
-			volume.pointColor = 'skyblue';
+			volume.pointColor = 'pink';
 
 			return volume;
 		}
@@ -791,6 +799,7 @@
 					//emit event if this is the first of any to collide
 					if (tcollision === false) {
 						tcollision = true;
+						++collisionCount;
 						console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
 						//// undo this
@@ -1027,23 +1036,6 @@
 			}, 3000);
 		}
 
-		//function solidifyIntersectionals() {
-		//	//Method one: convex geometry
-		//	var cmeshGeometry = new THREE.ConvexBufferGeometry(intersectionals);
-
-		//	var cmeshMaterial = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true });
-
-		//	//var cmesh = new THREE.Mesh(cmeshGeometry, cmeshMaterial);
-		//	//cmesh.renderOrder = 1;
-
-		//	setTimeout(function () {
-		//		scene.remove(theThing);
-		//		var thing = createSoftVolume(cmeshGeometry, 1, .1);
-		//		theThing = thing;
-
-		//	}, 5000);
-
-		//}
 		var frst = true;
 		var theOldThings;
 		function solidifyIntersectionals3() {
@@ -1053,6 +1045,7 @@
 				theOldThings.forEach(function (t) {
 					scene.remove(t);
 					physicsWorld.removeSoftBody(t.userData.physicsBody);
+					softBodies.splice(softBodies.indexOf(t), 1);
 				});
 			}, 5000);
 
@@ -1070,7 +1063,7 @@
 				var cmesh = new THREE.Mesh(cmeshGeometry, cmeshMaterial);
 
 				//cmesh.position.set(0, 30, 0);
-				cmesh.position.y = 30;
+				cmesh.position.y = 60;
 				//mesh.rotation.set(.5, 0, 0);
 
 				// offset the new thing to account for any sideways gravitational forces
@@ -1216,7 +1209,7 @@
 
 			// the below add shaders
 			renderer.render(scene, camera);
-			//composer.render( deltaTime );
+			composer.render(deltaTime);
 
 		}
 
