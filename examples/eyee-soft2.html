@@ -105,7 +105,7 @@
 
 		var startingAzimuth = 0;
 
-		var collisionCount = 0;
+		var collisionCount = 10;
 
 		var lastX = 0;
 		var lastY = 0;
@@ -187,13 +187,22 @@
 		var lastCollisionTimeout = null;
 		var synth;
 		function handleCollision(event) {
+			if (event.detail.co.geometry.boundingBox == null)
+				event.detail.co.geometry.computeBoundingBox();
+			const bbSize = event.detail.co.geometry.boundingBox.getSize();
+			const bbVol = bbSize.x * bbSize.y * bbSize.z;
+			console.log('vol of ' + bbVol);
+			let bbNoteVel = (bbVol / 1000);
+			if (bbNoteVel > 1) bbNoteVel = 1;
+			if (bbNoteVel < .1) bbNoteVel = .1;
+
 			if (Math.ceil(collisionCount / 10) % 2 === 0) {
-				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, (collisionCount % 10) / 10, true, synth, 4);
+				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, bbNoteVel, true, synth, 4);
 			}
 
 			// perhaps every cycle of 10x2, we should shuffle the pitches?
 			if (collisionCount % 20 === 0) {
-				synth.releaseAll();
+				setTimeout(function () { synth.releaseAll(); }, 4000);
 				determineNewPitches();
 			}
 
@@ -209,14 +218,65 @@
 			createEye();
 		}
 
+		const sixnotechords = [
+			'sus2#5b11',
+			'maj11',
+			'sus12maj9',
+			'min11b5',
+			'#12'
+		];
+		function getRandomInt(min, max) {
+			min = Math.ceil(min);
+			max = Math.floor(max);
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
 		function determineNewPitches() {
+			// Make the whole stage one scale
+			var tonic = new teoria.note(notemap[2][2]);
+			if (tonic.key() > 72) //g#6
+				tonic = teoria.note.fromKey(tonic.key() - 24);
 			for (var i = 0; i < notemap.length; i++) {
+				console.log(tonic);
+				const scale = tonic.scale('phrygian').notes();
+				console.log(scale);
 				for (var j = 0; j < notemap[i].length; j++) {
-					var t = teoria.note(notemap[i][j]);
-					notemap[i][j] = t.interval('M2').toString();
-					notemaphi[i][j] = t.interval('M16').toString();
+					notemap[i][j] = scale[getRandomInt(0,6)].toString();
 				}
 			}
+
+
+			//// Take the middle note as the future tonic (TODO: instead make this the most popular note maybe?)
+			////const tonic = new teoria.note(notemap[2][2]);
+
+			//for (var i = 0; i < notemap.length; i++) {
+			//	var tonic = new teoria.note(notemap[i][2]);
+			//	if (tonic.key() > 72) //g#6
+			//		tonic = teoria.note.fromKey(tonic.key() - 24);
+			//	console.log(tonic);
+			//	const scale = tonic.chord(sixnotechords[getRandomInt(0, sixnotechords.length - 1)]).notes();
+			//	console.log(scale);
+			//	for (var j = 0; j < notemap[i].length; j++) {
+			//		notemap[i][j] = scale[j].toString();
+			//	}
+			//}
+
+			// Make the 'hi' version that is just the above + 2 octaves
+			for (var i = 0; i < notemap.length; i++) {
+				for (var j = 0; j < notemap[i].length; j++) {
+					console.log(notemap[i][j]);
+					var t = new teoria.note(notemap[i][j]);
+					notemaphi[i][j] = teoria.note.fromKey(t.key() + 24).toString()
+				}
+			}
+
+			//// Raise everything by a M2
+			//for (var i = 0; i < notemap.length; i++) {
+			//	for (var j = 0; j < notemap[i].length; j++) {
+			//		var t = teoria.note(notemap[i][j]);
+			//		notemap[i][j] = t.interval('M2').toString();
+			//		notemaphi[i][j] = t.interval('M16').toString();
+			//	}
+			//}
 		}
 
 		function playNoteFromXZ(x, z, nmap, velocity, detune, syn, sec) {
@@ -409,8 +469,8 @@
 			if (eye[2] !== null && eye[3] !== null) {
 				scene.remove(eye[2]);
 				scene.remove(eye[3]);
-				physicsWorld.removeRigidBody(eye[2].userData.physicsBody);
-				physicsWorld.removeRigidBody(eye[3].userData.physicsBody);
+				physicsWorld.removeRigidBody(eye[2].userData.physicsBody, true);
+				physicsWorld.removeRigidBody(eye[3].userData.physicsBody, true);
 				rigidBodies.splice(rigidBodies.indexOf(eye[2]), 1);
 				rigidBodies.splice(rigidBodies.indexOf(eye[3]), 1);
 				eye[2].geometry.dispose();
@@ -1060,7 +1120,7 @@
 
 			//remove ground
 			setTimeout(function () {
-				physicsWorld.removeRigidBody(ground[1]);
+				physicsWorld.removeRigidBody(ground[1], true);
 				scene.remove(ground[1]);
 				ground[0].geometry.dispose();
 				ground[0].material.dispose();
