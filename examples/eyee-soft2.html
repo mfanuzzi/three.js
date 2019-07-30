@@ -60,6 +60,7 @@
 	<script src="rayintersect.js"></script>
 
 	<script src="js/tone.js"></script>
+	<script src="js/teoria.js"></script>
 
 	<script>
 
@@ -93,12 +94,12 @@
 		var transformAux1;
 		var softBodyHelpers;
 		var composer, renderPass, halftonePass, params;
-
 		var cameraFacingThings = [];
-		var collidableMeshList = [];
+
 		var theThings = [];
 		var ground;
 		var eye = [null, null, null, null];
+		var eyeTexture;
 
 		var intersectionals = [];
 
@@ -165,7 +166,7 @@
 		//];
 
 		//v3: chromatic at edges, Fmaj7 center, minor filling
-		const notemap = [
+		var notemap = [
 			['A3', 'A#3', 'B3', 'C3', 'C#3', 'D3'],
 			['E3', 'G4', 'D4', 'A4', 'E4', 'D#3'],
 			['D#', 'C4', 'E5', 'F5', 'B4', 'E3'],
@@ -173,7 +174,7 @@
 			['C#3', 'A#4', 'D#4', 'G#4', 'C#4', 'F#3'],
 			['C3', 'B3', 'A#3', 'A3', 'G#3', 'G3']
 		];
-		const notemaphi = [
+		var notemaphi = [
 			['A7', 'A#7', 'B7', 'C7', 'C#7', 'D7'],
 			['E7', 'G6', 'D6', 'A6', 'E6', 'D#7'],
 			['D#', 'C6', 'E7', 'F7', 'B6', 'E7'],
@@ -183,10 +184,38 @@
 		];
 
 
+		var lastCollisionTimeout = null;
 		var synth;
 		function handleCollision(event) {
-			if (Math.ceil(collisionCount / 10) % 2 == 0) {
+			if (Math.ceil(collisionCount / 10) % 2 === 0) {
 				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, (collisionCount % 10) / 10, true, synth, 4);
+			}
+
+			// perhaps every cycle of 10x2, we should shuffle the pitches?
+			if (collisionCount % 20 === 0) {
+				synth.releaseAll();
+				determineNewPitches();
+			}
+
+			// the below ensures that we have a way to auto-reset even if everything falls off the stage
+			if (lastCollisionTimeout)
+				clearTimeout(lastCollisionTimeout);
+
+			lastCollisionTimeout = setTimeout(handleCollisionTimeout, 20000);
+		}
+
+		// This is basically to ensure that if the thing misses the stage completely, we have a way of getting it running again
+		function handleCollisionTimeout() {
+			createEye();
+		}
+
+		function determineNewPitches() {
+			for (var i = 0; i < notemap.length; i++) {
+				for (var j = 0; j < notemap[i].length; j++) {
+					var t = teoria.note(notemap[i][j]);
+					notemap[i][j] = t.interval('M2').toString();
+					notemaphi[i][j] = t.interval('M16').toString();
+				}
 			}
 		}
 
@@ -209,7 +238,7 @@
 
 			if (detune === true) {
 				setTimeout(function () {
-					syn.set("detune", -1000, 10);
+					syn.set("detune", -500, 10);
 				}, 2000);
 			}
 		}
@@ -240,11 +269,21 @@
 		}
 
 		function init() {
-			var reverb = new Tone.JCReverb(.9).connect(Tone.Master);
-			var wide = new Tone.StereoWidener(.8);
-			var narrow = new Tone.StereoWidener(.2);
-			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow, reverb);
-			synth2 = new Tone.PolySynth(5, Tone.Synth).chain(wide, reverb);
+			var reverb = new Tone.JCReverb(.9);
+			var wide = new Tone.StereoWidener(.8).toMaster();
+			var narrow = new Tone.StereoWidener(.2).toMaster();
+			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
+			synth2 = new Tone.PolySynth(5, Tone.Synth).chain(wide);
+			synth.volume = -6;
+			synth2.volume = 0;
+			var masterCompressor = new Tone.Compressor({
+				"threshold": -6,
+				"ratio": 8,
+				"attack": 0.5,
+				"release": 0.1
+			});
+			Tone.Master.chain(reverb, masterCompressor);
+			Tone.Master.volume.value = -10; // without setting this, Chrome seems to crack up. like, too much.
 
 			initGraphics();
 
@@ -284,9 +323,12 @@
 			//controls.enabled = false;
 			controls.enableZoom = true;
 			controls.enablePan = false;
+			controls.maxDistance = 120;
+			controls.minDistance = 30;
 
-
+			// Load textures
 			textureLoader = new THREE.TextureLoader();
+			eyeTexture = textureLoader.load("textures/eye.jpg");
 
 			var ambientLight = new THREE.AmbientLight(0xaaaaaa);
 			scene.add(ambientLight);
@@ -338,7 +380,6 @@
 			composer.addPass(afterimagePass);
 
 
-
 		}
 
 		function initPhysics() {
@@ -372,6 +413,8 @@
 				physicsWorld.removeRigidBody(eye[3].userData.physicsBody);
 				rigidBodies.splice(rigidBodies.indexOf(eye[2]), 1);
 				rigidBodies.splice(rigidBodies.indexOf(eye[3]), 1);
+				eye[2].geometry.dispose();
+				eye[3].geometry.dispose();
 			}
 
 			// save old eyes
@@ -380,18 +423,14 @@
 
 			for (var i = 0; i < 2; i++) {
 				eye[i] = new THREE.Mesh(new THREE.SphereBufferGeometry(eyeRadius, 24, 10), new THREE.MeshPhongMaterial({ color: 0xFFFFFF }));
-				eye[i].pointColor = 'red';
+				eye[i].pointColor = '#ff0427';
 				eye[i].scale.x = 1.7;
 				eye[i].castShadow = true;
 				eye[i].receiveShadow = false;
-				textureLoader.load("textures/eye.jpg", function (texture) {
-					for (var i = 0; i < 2; i++) {
-						eye[i].material.map = texture;
-						eye[i].material.map.offset.x = .25;
-						eye[i].material.map.offset.y = .1;
-						eye[i].material.needsUpdate = true;
-					}
-				});
+				eye[i].material.map = eyeTexture;
+				eye[i].material.map.offset.x = .25;
+				eye[i].material.map.offset.y = .1;
+				eye[i].material.needsUpdate = true;
 				var eyeShape = new Ammo.btSphereShape(eyeRadius);
 				eyeShape.setMargin(margin);
 
@@ -583,7 +622,7 @@
 		function createSoftVolume(bufferGeom, mass, pressure) {
 
 			processGeometry(bufferGeom);
-			var volumeMat = new THREE.MeshLambertMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true }); //old
+			var volumeMat = new THREE.MeshLambertMaterial({ color: 0x55eeff, opacity: 0.5, transparent: true }); //old
 			//var volumeMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, shininess : 100 });
 			var volume = new THREE.Mesh(bufferGeom, volumeMat);
 			volume.castShadow = true;
@@ -636,7 +675,7 @@
 
 			softBodies.push(volume);
 
-			volume.pointColor = 'pink';
+			volume.pointColor = '#18d1bd';
 
 			return volume;
 		}
@@ -995,9 +1034,13 @@
 			if (points.length > 0) {
 				points.forEach(function (p) {
 					scene.remove(p);
+					p.material.dispose();
 				});
 			}
 			points = [];
+
+			//var loader = new THREE.TextureLoader();
+			//var texture = loader.load( 'textures/sprites/snowflake7_alpha.png' );
 
 			var allIntersections = [].concat.apply([], intersectionalGroups);
 			// Group the points by color
@@ -1019,6 +1062,8 @@
 			setTimeout(function () {
 				physicsWorld.removeRigidBody(ground[1]);
 				scene.remove(ground[1]);
+				ground[0].geometry.dispose();
+				ground[0].material.dispose();
 			}, 1000);
 
 			// recreate ground once thing has passed
@@ -1043,6 +1088,8 @@
 			theOldThings = theThings;
 			setTimeout(function () {
 				theOldThings.forEach(function (t) {
+					t.geometry.dispose();
+					t.material.dispose();
 					scene.remove(t);
 					physicsWorld.removeSoftBody(t.userData.physicsBody);
 					softBodies.splice(softBodies.indexOf(t), 1);
@@ -1053,6 +1100,7 @@
 
 			// Create the new things
 			var geometries = [];
+			var itemsWithinStage = 0;
 			intersectionalGroups.forEach(function (g) {
 				console.log('solidifying...');
 				//console.log(g);
@@ -1076,11 +1124,47 @@
 
 				THREE.BufferGeometryUtils.mergeVertices(cmeshGeometry);
 
+				// calculate their center
+				cmesh.geometry.computeBoundingBox();
+				var center = new THREE.Vector3();
+				cmesh.geometry.boundingBox.getCenter(center);
+				cmesh.localToWorld(center);
+				cmesh.geometry.worldcenter = center;
+				if (center.x < 15 && center.x > -15 && center.z < 15 && center.z > -15)
+					++itemsWithinStage;
+
 				// strike a high note for each thing
 				//playNoteFromXZ(cmesh.position.x, cmesh.position.z, notemaphi, 0.1, false);
 
 				geometries.push(cmeshGeometry);
+				//meshes.push(cmesh);
 			});
+
+			console.log(itemsWithinStage + ' of ' + geometries.length + ' within stage');
+			const avgX = geometries.reduce((a, c) => a + c.worldcenter.x, 0) / geometries.length;
+			const avgZ = geometries.reduce((a, c) => a + c.worldcenter.z, 0) / geometries.length;
+			console.log(avgX + ',' + avgZ);
+			if (itemsWithinStage <= (geometries.length - itemsWithinStage)) {
+				var shiftX = 0;
+				var shiftZ = 0;
+				if (avgX < -15 || avgX > 15)
+					shiftX = (avgX % 15) + ((Math.floor(avgX / 15) - (avgX > 0 ? 1 : -1)) * 15);
+				if (avgZ < -15 || avgZ > 15)
+					shiftZ = (avgZ % 15) + ((Math.floor(avgZ / 15) - (avgZ > 0 ? 1 : -1)) * 15);
+
+				// the above will land the center within the stage, but let's push it a couple notches further
+				if (shiftX > 0) shiftX += 1;
+				else if (shiftX < 0) shiftX -= 1;
+				if (shiftZ > 0) shiftZ += 1;
+				else if (shiftZ < 0) shiftZ -= 1;
+
+				console.log('shifting to center by ' + shiftX + ',' + shiftZ + '...');
+
+				// subtract shift amounts from each geometry
+				geometries.forEach(function (g) {
+					g.translate(shiftX * -1, 0, shiftZ * -1);
+				});
+			}
 
 			// wait for the thing to pass below the stage and recreate it
 			setTimeout(function () {
@@ -1209,7 +1293,7 @@
 
 			// the below add shaders
 			renderer.render(scene, camera);
-			composer.render(deltaTime);
+			//composer.render(deltaTime);
 
 		}
 
