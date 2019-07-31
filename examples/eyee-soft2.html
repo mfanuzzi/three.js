@@ -4,12 +4,17 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<style>
+		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-regular-webfont.woff) format("woff");font-weight:400;font-style:normal}
+		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-italic-webfont.woff) format("woff");font-weight:400;font-style:italic}
+		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-bold-webfont.woff) format("woff");font-weight:700;font-style:normal}
+		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-bolditalic-webfont.woff) format("woff");font-weight:700;font-style:italic}
+
 		body {
-			color: #61443e;
-			font-family: Monospace;
-			font-size: 13px;
+			color: #000;
+			font-family: 'Century Gothic',Adventor,sans-serif;
+			font-size: 28px;
 			text-align: center;
-			background-color: #bfd1e5;
+			background-color: #fff;
 			margin: 0px;
 			overflow: hidden;
 		}
@@ -24,10 +29,48 @@
 		a {
 			color: #a06851;
 		}
+
+		#container {
+			width: 100%; height: 100%;
+		}
+		#welcome {
+			width: 100%; height: 100%;
+			display: flex;
+			flex-direction: column;
+			filter: grayscale(1);
+		}
+		#welcome:after {
+			display: block;
+			width: 100%;
+			height: 100%;
+			position: absolute;
+			content: '';
+			background: linear-gradient(#fff, #9198e5);
+			opacity: .3;
+		}
+		#welcome > div  {
+			height: 50%;
+		}
+		#logo {
+			background: url('https://lazerbea.ms/img/logo.svg') no-repeat bottom right;
+			background-size: fit;
+		}
+		#loadin {
+			background-color: #d21888;
+		}
+
 	</style>
 </head>
 <body>
-	<div id="container"><br /><br /><br /><br /><br />Loading...</div>
+	<div id="container">
+		<div id="welcome">
+			<div id="logo"></div>
+			<div id="loadin">
+				<p><strong>LB011</strong>
+				<br />&ldquo;the forever-falls&rdquo;</p>
+			</div>
+		</div>
+	</div>
 
 	<script src="../build/three.js"></script>
 	<script src="js/libs/ammo.js"></script>
@@ -80,7 +123,7 @@
 		var mouseCoords = new THREE.Vector2();
 		var raycaster = new THREE.Raycaster();
 		var ballMaterial = new THREE.MeshPhongMaterial({ color: 0x202020 });
-		var volumeMat;
+		var volumeMat, volumeMatOld;
 		var pos = new THREE.Vector3();
 		var quat = new THREE.Quaternion();
 
@@ -106,7 +149,7 @@
 
 		var startingAzimuth = 0;
 
-		var collisionCount = 10;
+		var collisionCount = 0;
 
 		var lastX = 0;
 		var lastY = 0;
@@ -197,7 +240,7 @@
 			if (bbNoteVel < .1) bbNoteVel = .1;
 
 			if (Math.ceil(collisionCount / 10) % 2 === 0) {
-				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, bbNoteVel, true, synth, 4);
+				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, bbNoteVel, true, synth, ((collisionCount % 10) / 10) * 3 + .1);
 			}
 
 			// perhaps every cycle of 10x2, we should shuffle the pitches?
@@ -331,8 +374,10 @@
 			let narrow = new Tone.StereoWidener(.2).toMaster();
 			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
 			synth2 = new Tone.PolySynth(5, Tone.Synth).chain(wide);
-			synth.volume = -6;
-			synth2.volume = 0;
+			synth2.voices.forEach(v => v.portamento = 1);
+
+			synth.volume = -8;
+			synth2.volume = -2;
 			let masterCompressor = new Tone.Compressor({
 				"threshold": -6,
 				"ratio": 8,
@@ -390,6 +435,7 @@
 			// Material for soft bodies
 			volumeMat = new THREE.MeshLambertMaterial({ color: 0x55eeff, opacity: 0.5, transparent: true }); //old
 			//var volumeMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, shininess : 100 });
+			volumeMatOld = volumeMat.clone();
 			textureLoader.load("textures/eye.jpg", function (texture) {
 
 				volumeMat.map = texture;
@@ -397,6 +443,7 @@
 				volumeMat.map.offset.y = .1;
 				//volume.material.needsUpdate = true;
 				//console.log(volume.material);
+				volumeMatOld.map = volumeMat.map;
 
 			});
 
@@ -431,21 +478,21 @@
 			// post-processing
 			composer = new THREE.EffectComposer(renderer);
 			renderPass = new THREE.RenderPass(scene, camera);
-			//params = {
-			//	shape: 1,
-			//	radius: 3,
-			//	rotateR: Math.PI / 12,
-			//	rotateB: Math.PI / 12 * 2,
-			//	rotateG: Math.PI / 12 * 3,
-			//	scatter: 0,
-			//	blending: 1,
-			//	blendingMode: 1,
-			//	greyscale: true,
-			//	disable: false
-			//};
-			//halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
+			params = {
+				shape: 1,
+				radius: 3,
+				rotateR: Math.PI / 12,
+				rotateB: Math.PI / 12 * 2,
+				rotateG: Math.PI / 12 * 3,
+				scatter: 0,
+				blending: .2,
+				blendingMode: 2,
+				greyscale: true,
+				disable: false
+			};
+			halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
 			composer.addPass(renderPass);
-			//composer.addPass(halftonePass);
+			composer.addPass(halftonePass);
 			afterimagePass = new THREE.AfterimagePass();
 			composer.addPass(afterimagePass);
 
@@ -527,7 +574,7 @@
 
 				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
 				eyeBody.setFriction(0.8);
-				eyeBody.applyLocalTorque(new Ammo.btVector3(0,0,5 * (i % 2 === 0 ? -1 : 1)))
+				eyeBody.applyLocalTorque(new Ammo.btVector3(0,0,3 * (i % 2 === 0 ? -1 : 1)))
 
 				playNoteFromXZ(ipos.x, ipos.z, notemaphi, 0.1, false, synth2, 8);
 			}
@@ -897,7 +944,12 @@
 						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 
-						afterimagePass.uniforms["damp"].value = .99;
+						afterimagePass.uniforms["damp"].value = .999;
+
+						volumeMatOld.opacity = volumeMat.opacity;
+
+						if (collisionCount % 10 == 0)
+							halftonePass.uniforms.greyscale.value = !halftonePass.uniforms.greyscale.value;
 					}
 					//now track this particular one
 					if (collisionObject.collided === false) {
@@ -1143,6 +1195,9 @@
 		function solidifyIntersectionals3() {
 			// Remove the old things
 			theOldThings = theThings;
+			theOldThings.forEach(function (t) {
+				t.material = volumeMatOld;
+			});
 			setTimeout(function () {
 				theOldThings.forEach(function (t) {
 					t.geometry.dispose();
@@ -1253,10 +1308,10 @@
 				p.scale.x += .002;
 				p.updateMatrix();
 				p.material.size -= .005;
-
 				
-				afterimagePass.uniforms["damp"].value -= 0.0005;
 			});
+			afterimagePass.uniforms["damp"].value -= 0.00025;
+			volumeMatOld.opacity -= .004;
 		}
 
 		//function solidifyIntersectionals2() {
