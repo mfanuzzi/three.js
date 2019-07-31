@@ -52,11 +52,13 @@
 			height: 50%;
 		}
 		#logo {
-			background: url('https://lazerbea.ms/img/logo.svg') no-repeat bottom right;
-			background-size: fit;
+			background: url('https://lazerbea.ms/img/logo.svg') no-repeat -10vw bottom;
+			background-size: 100% auto;
 		}
 		#loadin {
 			background-color: #d21888;
+			color: #fff;
+			padding: 1em;
 		}
 
 	</style>
@@ -66,8 +68,10 @@
 		<div id="welcome">
 			<div id="logo"></div>
 			<div id="loadin">
-				<p><strong>LB011</strong>
-				<br />&ldquo;the forever-falls&rdquo;</p>
+				<p>
+					<strong>LB011</strong>
+					<br /><em style="letter-spacing: .5em">&ldquo;two unimaginable, supercosmic, eternal somethings</em>&rdquo;
+				</p>
 			</div>
 		</div>
 	</div>
@@ -153,6 +157,10 @@
 
 		var lastX = 0;
 		var lastY = 0;
+
+		// audio variables
+		var reverb;
+
 		function handleOrientation(event) {
 			// Range of beta/gamma is -180 to 180
 			var x = event.gamma;  // In degree in the range [-180,180] -- up/down
@@ -245,7 +253,11 @@
 
 			// perhaps every cycle of 10x2, we should shuffle the pitches?
 			if (collisionCount % 20 === 0) {
-				setTimeout(function () { synth.releaseAll(); }, 4000);
+				reverb.roomSize.rampTo(.9, '2s')
+				setTimeout(() => {
+					synth.releaseAll(); // this may no longer be neccesary
+					reverb.roomSize.rampTo(1.2, '2s')
+				}, 4000);
 				determineNewPitches();
 			}
 
@@ -334,7 +346,7 @@
 			//console.log(eX + ',' + eZ + ' from ' + x + ',' + z);
 
 			syn.set("detune", 0);
-			syn.triggerAttackRelease(nmap[eX][eZ], sec + 's', null, velocity);
+			syn.triggerAttackRelease(nmap[eX][eZ], sec + 's', undefined, velocity);
 
 			if (detune === true) {
 				setTimeout(function () {
@@ -369,7 +381,7 @@
 		}
 
 		function init() {
-			let reverb = new Tone.JCReverb(.9);
+			reverb = new Tone.JCReverb(1.1);
 			let wide = new Tone.StereoWidener(.8).toMaster();
 			let narrow = new Tone.StereoWidener(.2).toMaster();
 			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
@@ -848,6 +860,7 @@
 		}
 
 		function processClick() {
+			Tone.context.resume()
 
 			if (clickRequest) {
 
