@@ -1,6 +1,6 @@
 <html lang="en">
 <head>
-	<title>MFMFMFMFS LSOOOOO</title>
+	<title>unimaginable, supercosmic, eternal somethings [LB011]</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 	<style>
@@ -16,7 +16,7 @@
 			text-align: center;
 			background-color: #fff;
 			margin: 0px;
-			overflow: hidden;
+			cursor: grab;
 		}
 
 		#info {
@@ -34,6 +34,10 @@
 			width: 100%; height: 100%;
 		}
 		#welcome {
+			position: absolute;
+			top: 0;
+			left: 0;
+			z-index: 69;
 			width: 100%; height: 100%;
 			display: flex;
 			flex-direction: column;
@@ -51,6 +55,11 @@
 		#welcome > div  {
 			height: 50%;
 		}
+		@media (orientation: portrait) {
+			#welcome > div:first-child {
+				height: 15%;
+			}
+		}
 		#logo {
 			background: url('https://lazerbea.ms/img/logo.svg') no-repeat -10vw bottom;
 			background-size: 100% auto;
@@ -60,29 +69,94 @@
 			color: #fff;
 			padding: 1em;
 		}
+		button {
+			padding-right: 1.72209em;
+			padding-bottom: 1.06431em;
+			font-size: 2.12862em;
+			width: calc(100% - 2em);
+			background-color: #18d1bd;
+			color: #fff;
+			animation: 2s infinite alternate gloooo;
+			text-shadow: .05em 0.25em 0px black;
+			border-width: 1em;
+			position: absolute;
+			z-index: 666;
+			left: 1em;
+		}
+		button:hover {
+			color: #000;
+			cursor: grabbing;
+			animation-duration: .2s;
+		}
+		@keyframes gloooo {
+			0% { background-color: #18d1bd; }
+			50% { background-color: #d21888; }
+			100% { background-color: #18d1bd; }
+		}
+		#begin {
+
+		}
+		#huh {
+			width: auto;
+			font-size: 1.618em;
+			text-align: center;
+			padding: 0;
+			top: 0;
+			font-size: 2vw;
+		}
+		#creds {
+			position: absolute;
+			padding: 1em 1em 0 1em;
+			top: 2em;
+			left: 11vw;
+			background: linear-gradient(#fff, #9198e5);
+			height: auto !important;
+			z-index: 666;
+			display: none;
+			color: #fff;
+		}
+		.creds #creds {
+			display: block;
+		}
+
+		.start {
+			overflow: hidden;
+		}
 
 	</style>
 </head>
 <body>
 	<div id="container">
-		<div id="welcome">
-			<div id="logo"></div>
-			<div id="loadin">
-				<p>
-					<strong>LB011</strong>
-					<br /><em style="letter-spacing: .5em">&ldquo;two unimaginable, supercosmic, eternal somethings</em>&rdquo;
-				</p>
-			</div>
+	</div>
+	<div id="welcome">
+		<div id="logo"></div>
+		<div id="loadin">
+			<p>
+				<strong>LB011</strong>
+				<br /><em style="letter-spacing: .5em">&ldquo;unimaginable, supercosmic, eternal somethings</em>&rdquo;
+			</p>
+			<p><button id="begin">begin feel</button><button id="huh">?</button></p>
+		</div>
+		<div id="creds">
+			<p>
+				eternal falling.<br />
+				based upon actual events &amp; a dream about endless space / infinite renewal.<br>
+				double-click (or double-tap) to capture a moment.<br>
+				by <a href="https://lazerbea.ms">lazerbea.ms</a>
+			</p>
 		</div>
 	</div>
+	<div id="hud">
+		<canvas id="screenshot" />
+	</div>
 
-	<script src="../build/three.js"></script>
+	<script src="js/three.min.js"></script>
 	<script src="js/libs/ammo.js"></script>
 	<script src="js/controls/OrbitControls.js"></script>
 	<script src="js/utils/BufferGeometryUtils.js"></script>
 	<script src="js/WebGL.js"></script>
 	<script src="js/loaders/GLTFLoader.js"></script>
-	<script src="js/libs/stats.min.js"></script>
+	<!--<script src="js/libs/stats.min.js"></script>-->
 	<script src="js/postprocessing/EffectComposer.js"></script>
 	<script src="js/postprocessing/RenderPass.js"></script>
 	<script src="js/postprocessing/ShaderPass.js"></script>
@@ -91,8 +165,6 @@
 
 	<script src="js/shaders/CopyShader.js"></script>
 	<script src="js/shaders/HalftoneShader.js"></script>
-	<script src="js/shaders/DepthLimitedBlurShader.js"></script>
-	<script src="js/shaders/UnpackDepthRGBAShader.js"></script>
 	<script src="js/shaders/AfterimageShader.js"></script>
 
 	<script src="js/geometries/ConvexGeometry.js"></script>
@@ -101,13 +173,15 @@
 
 	<script src="js/modifiers/SimplifyModifier.js"></script>
 
-	<script src="js/csg.js"></script>
-	<script src="js/ThreeCSG.js"></script>
+	<!--<script src="js/csg.js"></script>
+	<script src="js/ThreeCSG.js"></script>-->
 
 	<script src="rayintersect.js"></script>
 
 	<script src="js/tone.js"></script>
 	<script src="js/teoria.js"></script>
+
+	<script src="js/FileSaver.min.js"></script>
 
 	<script>
 
@@ -119,7 +193,7 @@
 		}
 
 		// Graphics variables
-		var container, stats;
+		var container; //, stats;
 		var camera, controls, scene, renderer;
 		var textureLoader;
 		var clock = new THREE.Clock();
@@ -247,7 +321,7 @@
 			if (bbNoteVel > 1) bbNoteVel = 1;
 			if (bbNoteVel < .1) bbNoteVel = .1;
 
-			if (Math.ceil(collisionCount / 10) % 2 === 0) {
+			if (Math.ceil((collisionCount + 1) / 10) % 2 === 0) {
 				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, bbNoteVel, true, synth, ((collisionCount % 10) / 10) * 3 + .1);
 			}
 
@@ -288,12 +362,12 @@
 		function determineNewPitches() {
 			// Make the whole stage one scale
 			var tonic = new teoria.note(notemap[2][2]);
-			if (tonic.key() > 60) 
+			if (tonic.key() > 60)
 				tonic = teoria.note.fromKey(tonic.key() - 12);
 			for (var i = 0; i < notemap.length; i++) {
 				const scale = tonic.scale('phrygian').notes();
 				for (var j = 0; j < notemap[i].length; j++) {
-					notemap[i][j] = scale[getRandomInt(0,6)].toString();
+					notemap[i][j] = scale[getRandomInt(0, 6)].toString();
 				}
 			}
 
@@ -381,6 +455,19 @@
 		}
 
 		function init() {
+			initSound();
+
+			initGraphics();
+
+			initPhysics();
+
+			//createObjects();
+
+			initInput();
+
+		}
+
+		function initSound() {
 			reverb = new Tone.JCReverb(1.1);
 			let wide = new Tone.StereoWidener(.8).toMaster();
 			let narrow = new Tone.StereoWidener(.2).toMaster();
@@ -398,15 +485,6 @@
 			});
 			Tone.Master.chain(reverb, masterCompressor);
 			Tone.Master.volume.value = -10; // without setting this, Chrome seems to crack up. like, too much.
-
-			initGraphics();
-
-			initPhysics();
-
-			createObjects();
-
-			initInput();
-
 		}
 
 		function initGraphics() {
@@ -424,7 +502,9 @@
 			//camera.rotation.order = 'YXZ';
 			//camera.rotation.x = -1.5;
 
-			renderer = new THREE.WebGLRenderer();
+			renderer = new THREE.WebGLRenderer({
+				preserveDrawingBuffer: true // to enable saving images
+			});
 			renderer.setPixelRatio(window.devicePixelRatio);
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
@@ -479,10 +559,10 @@
 
 			scene.add(light);
 
-			stats = new Stats();
-			stats.domElement.style.position = 'absolute';
-			stats.domElement.style.top = '0px';
-			container.appendChild(stats.domElement);
+			//stats = new Stats();
+			//stats.domElement.style.position = 'absolute';
+			//stats.domElement.style.top = '0px';
+			//container.appendChild(stats.domElement);
 
 
 			window.addEventListener('resize', onWindowResize, false);
@@ -531,7 +611,7 @@
 
 		function createEye(meshToTarget) {
 			// Create rigid eye
-			var eyeMass = .5;
+			var eyeMass = 5;
 			var eyeRadius = 2;
 
 			// remove last round's old eyes
@@ -586,7 +666,7 @@
 
 				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
 				eyeBody.setFriction(0.8);
-				eyeBody.applyLocalTorque(new Ammo.btVector3(0,0,3 * (i % 2 === 0 ? -1 : 1)))
+				eyeBody.applyLocalTorque(new Ammo.btVector3(0, 0, 3 * (i % 2 === 0 ? -1 : 1)))
 
 				playNoteFromXZ(ipos.x, ipos.z, notemaphi, 0.1, false, synth2, 8);
 			}
@@ -595,28 +675,6 @@
 		}
 
 		function createObjects() {
-
-			var mat = new THREE.ShaderMaterial({
-				uniforms: {},
-				vertexShader: [
-					"varying vec2 vUV;",
-					"varying vec3 vNormal;",
-					"void main() {",
-					"vUV = uv;",
-					"vNormal = vec3( normal );",
-					"gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
-					"}"
-				].join("\n"),
-				fragmentShader: [
-					"varying vec2 vUV;",
-					"varying vec3 vNormal;",
-					"void main() {",
-					"vec4 c = vec4( abs( vNormal ) + vec3( vUV, 0.0 ), 0.0 );",
-					"gl_FragColor = c;",
-					"}"
-				].join("\n")
-			});
-
 
 			// Ground (hard)
 			pos.set(0, -1, 0);
@@ -841,6 +899,74 @@
 		}
 
 		function initInput() {
+			const but = document.getElementById('begin');
+			but.addEventListener('mousedown', letsBegin);
+			but.addEventListener('touchstart', letsBegin);
+
+			const huh = document.getElementById('huh');
+			huh.addEventListener('mousedown', showCreds);
+			huh.addEventListener('touchstart', showCreds);
+
+			renderer.domElement.addEventListener('dblclick', saveImage);
+		}
+
+		function showCreds(e) {
+			document.body.classList.add('creds');
+			document.body.addEventListener('mousedown', hideCreds);
+			document.body.addEventListener('touchstart', hideCreds);
+			if (e.target.tagName.toLowerCase() !== "a")
+				e.stopPropagation();
+
+			const huh = document.getElementById('huh');
+			huh.removeEventListener('mousedown', showCreds);
+			huh.removeEventListener('touchstart', showCreds);
+		}
+
+		function hideCreds(e) {
+			document.body.classList.remove('creds');
+			document.body.removeEventListener('mousedown', hideCreds);
+			document.body.removeEventListener('touchstart', hideCreds);
+			console.log(e.target.tagName.toLowerCase());
+			if (e.target.tagName.toLowerCase() !== "a") {
+				e.stopPropagation();
+			} else {
+				document.location.assign(e.target.href);
+			}
+
+			const huh = document.getElementById('huh');
+			huh.addEventListener('mousedown', showCreds);
+			huh.addEventListener('touchstart', showCreds);
+		}
+
+		function saveImage() {
+			document.body.classList.add('screenshot');
+
+			var tcanvas = document.createElement('canvas');
+			tcanvas.height = renderer.domElement.height;
+			tcanvas.width = renderer.domElement.width;
+
+			tcanvas.toBlob(function (blob) {
+				createImageBitmap(blob).then(
+					b => {
+						tcanvas.getContext('2d').putImageData(b, 0, 0);
+						document.body.appendChild(tcanvas);
+						//tcanvas.toBlob(bb => saveAs(bb, "unimag.png"));
+					}
+				)
+				document.body.classList.remove('screenshot');
+				//saveAs(blob, "unimaginable.png");
+			});
+		}
+
+		function letsBegin() {
+			Tone.context.resume()
+
+			document.body.classList.add('start');
+
+			createObjects();
+
+			const welcome = document.getElementById('welcome');
+			welcome.parentElement.removeChild(welcome);
 
 			window.addEventListener('mousedown', function (event) {
 
@@ -860,11 +986,10 @@
 		}
 
 		function processClick() {
-			Tone.context.resume()
 
 			if (clickRequest) {
 
-				var azimuthDiff = startingAzimuth - controls.getAzimuthalAngle();
+				const azimuthDiff = startingAzimuth - controls.getAzimuthalAngle();
 
 				// So, the Y gravity will remain as-is. But X and Z will change with angle.
 				gravX = (azimuthDiff * 3);
@@ -1218,7 +1343,7 @@
 					physicsWorld.removeSoftBody(t.userData.physicsBody, true);
 					softBodies.splice(softBodies.indexOf(t), 1);
 				});
-			}, 6000);
+			}, 7000);
 
 			theThings = [];
 
@@ -1321,7 +1446,7 @@
 				p.scale.x += .002;
 				p.updateMatrix();
 				p.material.size -= .005;
-				
+
 			});
 			afterimagePass.uniforms["damp"].value -= 0.00025;
 			volumeMatOld.opacity -= .004;
@@ -1382,7 +1507,8 @@
 							trackIntersectingPoints(t, 3);
 						});
 						for (var t = 0; t < 2; t++) {
-							trackIntersectingPoints(eye[t], 1);
+							if (eye[t])
+								trackIntersectingPoints(eye[t], 1);
 						}
 					} else {
 						roundAndRemoveDupes();
@@ -1399,7 +1525,7 @@
 				}
 			}
 
-			stats.update();
+			//stats.update();
 
 		}
 
