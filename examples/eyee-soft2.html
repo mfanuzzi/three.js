@@ -17,6 +17,7 @@
 			background-color: #fff;
 			margin: 0px;
 			cursor: grab;
+			overflow-x: hidden;
 		}
 
 		#info {
@@ -41,6 +42,7 @@
 			width: 100%; height: 100%;
 			display: flex;
 			flex-direction: column;
+			background-color: #fff;
 			filter: grayscale(1);
 		}
 		#welcome:after {
@@ -119,13 +121,20 @@
 			display: block;
 		}
 
+		#loadMsg { display: none; }
+
+		.loading #loadMsg { display: inline; }
+		.loading #begin { display: none; }
+		.loading #huh { display: none; }
+		.loading #creds { display: none; }
+
 		.start {
 			overflow: hidden;
 		}
 
 	</style>
 </head>
-<body>
+<body class="loading">
 	<div id="container">
 	</div>
 	<div id="welcome">
@@ -135,7 +144,11 @@
 				<strong>LB011</strong>
 				<br /><em style="letter-spacing: .5em">&ldquo;unimaginable, supercosmic, eternal somethings</em>&rdquo;
 			</p>
-			<p><button id="begin">begin feel</button><button id="huh">?</button></p>
+			<p>
+				<span id="loadMsg">loading...</span>
+				<button id="begin">begin feel</button>
+				<button id="huh">?</button>
+			</p>
 		</div>
 		<div id="creds">
 			<p>
@@ -169,14 +182,14 @@
 
 	<script src="js/geometries/ConvexGeometry.js"></script>
 	<script src="js/math/ConvexHull.js"></script>
-	<script src="js/QuickHull.js"></script>
+	<!--<script src="js/QuickHull.js"></script>-->
 
 	<script src="js/modifiers/SimplifyModifier.js"></script>
 
 	<!--<script src="js/csg.js"></script>
 	<script src="js/ThreeCSG.js"></script>-->
 
-	<script src="rayintersect.js"></script>
+	<!--<script src="rayintersect.js"></script>-->
 
 	<script src="js/tone.js"></script>
 	<script src="js/teoria.js"></script>
@@ -196,12 +209,12 @@
 		var container; //, stats;
 		var camera, controls, scene, renderer;
 		var textureLoader;
-		var clock = new THREE.Clock();
+		const clock = new THREE.Clock();
 		var clickRequest = false;
 		var mouseCoords = new THREE.Vector2();
 		var raycaster = new THREE.Raycaster();
-		var ballMaterial = new THREE.MeshPhongMaterial({ color: 0x202020 });
 		var volumeMat, volumeMatOld;
+		var initialMesh;
 		var pos = new THREE.Vector3();
 		var quat = new THREE.Quaternion();
 
@@ -361,12 +374,12 @@
 		}
 		function determineNewPitches() {
 			// Make the whole stage one scale
-			var tonic = new teoria.note(notemap[2][2]);
+			const tonic = new teoria.note(notemap[2][2]);
 			if (tonic.key() > 60)
 				tonic = teoria.note.fromKey(tonic.key() - 12);
-			for (var i = 0; i < notemap.length; i++) {
+			for (let i = 0; i < notemap.length; i++) {
 				const scale = tonic.scale('phrygian').notes();
-				for (var j = 0; j < notemap[i].length; j++) {
+				for (let j = 0; j < notemap[i].length; j++) {
 					notemap[i][j] = scale[getRandomInt(0, 6)].toString();
 				}
 			}
@@ -388,9 +401,9 @@
 			//}
 
 			// Make the 'hi' version that is just the above + 2 octaves
-			for (var i = 0; i < notemap.length; i++) {
-				for (var j = 0; j < notemap[i].length; j++) {
-					var t = new teoria.note(notemap[i][j]);
+			for (let i = 0; i < notemap.length; i++) {
+				for (let j = 0; j < notemap[i].length; j++) {
+					const t = new teoria.note(notemap[i][j]);
 					notemaphi[i][j] = teoria.note.fromKey(t.key() + 24).toString()
 				}
 			}
@@ -439,8 +452,6 @@
 			Ammo = AmmoLib;
 
 			init();
-			animate();
-
 		});
 
 		function groupBy(objectArray, property) {
@@ -459,16 +470,18 @@
 
 			initGraphics();
 
-			initPhysics();
+			// initPhysics(); // Now called from initGraphics
 
-			//createObjects();
+			//createObjects(); // Now called upon user input
 
-			initInput();
+			// initInput(); // Now called from initPhysics
 
 		}
 
 		function initSound() {
-			reverb = new Tone.JCReverb(1.1);
+			Tone.Master.volume.value = -99; // without setting this, Chrome seems to crack up. like, too much.
+
+			reverb = new Tone.JCReverb(.8);
 			let wide = new Tone.StereoWidener(.8).toMaster();
 			let narrow = new Tone.StereoWidener(.2).toMaster();
 			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
@@ -484,7 +497,6 @@
 				"release": 0.1
 			});
 			Tone.Master.chain(reverb, masterCompressor);
-			Tone.Master.volume.value = -10; // without setting this, Chrome seems to crack up. like, too much.
 		}
 
 		function initGraphics() {
@@ -503,7 +515,7 @@
 			//camera.rotation.x = -1.5;
 
 			renderer = new THREE.WebGLRenderer({
-				preserveDrawingBuffer: true // to enable saving images
+				//preserveDrawingBuffer: true // to enable saving images
 			});
 			renderer.setPixelRatio(window.devicePixelRatio);
 			renderer.setSize(window.innerWidth, window.innerHeight);
@@ -528,16 +540,13 @@
 			volumeMat = new THREE.MeshLambertMaterial({ color: 0x55eeff, opacity: 0.5, transparent: true }); //old
 			//var volumeMat = new THREE.MeshPhongMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, shininess : 100 });
 			volumeMatOld = volumeMat.clone();
-			textureLoader.load("textures/eye.jpg", function (texture) {
 
-				volumeMat.map = texture;
-				volumeMat.map.offset.x = .25;
-				volumeMat.map.offset.y = .1;
-				//volume.material.needsUpdate = true;
-				//console.log(volume.material);
-				volumeMatOld.map = volumeMat.map;
-
-			});
+			volumeMat.map = eyeTexture;
+			volumeMat.map.offset.x = .25;
+			volumeMat.map.offset.y = .1;
+			//volume.material.needsUpdate = true;
+			//console.log(volume.material);
+			volumeMatOld.map = volumeMat.map;
 
 			var ambientLight = new THREE.AmbientLight(0xaaaaaa);
 			scene.add(ambientLight);
@@ -582,13 +591,34 @@
 				greyscale: true,
 				disable: false
 			};
-			halftonePass = new THREE.HalftonePass(window.innerWidth, window.innerHeight, params);
+			halftonePass = new THREE.HalftonePass(renderer.getSize().x, renderer.getSize().y, params);
+			afterimagePass = new THREE.AfterimagePass();
 			composer.addPass(renderPass);
 			composer.addPass(halftonePass);
-			afterimagePass = new THREE.AfterimagePass();
 			composer.addPass(afterimagePass);
 
+			// Load model(s)
+			// TODO: this should be done with promises...
+			var gloader = new THREE.GLTFLoader();
 
+			gloader.load("models/gltf/eyeees.glb", function (gltf) {
+
+				let mesh = gltf.scene.children[2];
+				mesh.position.set(2, 60, 0);
+				//mesh.position.y = 30;
+				mesh.scale.set(5, 5, 5);
+				mesh.rotation.set(1, 0, 0);
+
+				// apply the transform
+				mesh.updateMatrix();
+				mesh.geometry.applyMatrix(mesh.matrix);
+				mesh.scale.set(1, 1, 1);
+				mesh.updateMatrix();
+
+				initialMesh = mesh;
+
+				initPhysics();
+			});
 		}
 
 		function initPhysics() {
@@ -607,6 +637,7 @@
 			transformAux1 = new Ammo.btTransform();
 			softBodyHelpers = new Ammo.btSoftBodyHelpers();
 
+			initInput();
 		}
 
 		function createEye(meshToTarget) {
@@ -630,7 +661,7 @@
 			eye[3] = eye[1];
 			eye[2] = eye[0];
 
-			for (var i = 0; i < 2; i++) {
+			for (let i = 0; i < 2; i++) {
 				eye[i] = new THREE.Mesh(new THREE.SphereBufferGeometry(eyeRadius, 24, 10), new THREE.MeshPhongMaterial({ color: 0xFFFFFF }));
 				eye[i].pointColor = '#ff0427';
 				eye[i].scale.x = 1.7;
@@ -688,52 +719,26 @@
 
 			//createParalellepiped(40, 40, 1, 0, new THREE.Vector3(0, 30, -25), quat, new THREE.MeshPhongMaterial({ color: 0x333333 }));
 
-
-
 			createEye();
 			pos.y = 25;
 			quat.set(0, 0, 0, 1);
 
 			// Create soft volumes
-			var volumeMass = 15;
+			let thing = createSoftVolume(initialMesh.geometry, 900, 40);
+			theThings.push(thing);
 
-			var loader = new THREE.GLTFLoader();
-
-			loader.load("models/gltf/eyees.glb", function (gltf) {
-
-				//mesheye = gltf.scene.children[3];
-				//scene.add( mesheye );
-
-
-				mesh = gltf.scene.children[2];
-				mesh.position.set(2, 60, 0);
-				//mesh.position.y = 30;
-				mesh.scale.set(5, 5, 5);
-				mesh.rotation.set(1, 0, 0);
-
-				// apply the transform
-				mesh.updateMatrix();
-				mesh.geometry.applyMatrix(mesh.matrix);
-				mesh.scale.set(1, 1, 1);
-				mesh.updateMatrix();
-
-				var thing = createSoftVolume(mesh.geometry, 900, 40);
-				theThings.push(thing);
-
-			});
-
-
+			// ^ Could maybe this then be disposed here safely?
 		}
 
 		function processGeometry(bufGeometry) {
 
 			// Ony consider the position values when merging the vertices
-			var posOnlyBufGeometry = new THREE.BufferGeometry();
+			let posOnlyBufGeometry = new THREE.BufferGeometry();
 			posOnlyBufGeometry.addAttribute('position', bufGeometry.getAttribute('position'));
 			posOnlyBufGeometry.setIndex(bufGeometry.getIndex());
 
 			// Merge the vertices so the triangle soup is converted to indexed triangles
-			var indexedBufferGeom = THREE.BufferGeometryUtils.mergeVertices(posOnlyBufGeometry);
+			let indexedBufferGeom = THREE.BufferGeometryUtils.mergeVertices(posOnlyBufGeometry);
 
 			// Create index arrays mapping the indexed vertices to bufGeometry vertices
 			mapIndices(bufGeometry, indexedBufferGeom);
@@ -743,7 +748,7 @@
 
 		function isEqual(x1, y1, z1, x2, y2, z2) {
 
-			var delta = 0.000001;
+			const delta = 0.000001;
 			return Math.abs(x2 - x1) < delta &&
 				Math.abs(y2 - y1) < delta &&
 				Math.abs(z2 - z1) < delta;
@@ -754,27 +759,27 @@
 
 			// Creates ammoVertices, ammoIndices and ammoIndexAssociation in bufGeometry
 
-			var vertices = bufGeometry.attributes.position.array;
-			var idxVertices = indexedBufferGeom.attributes.position.array;
-			var indices = indexedBufferGeom.index.array;
+			let vertices = bufGeometry.attributes.position.array;
+			let idxVertices = indexedBufferGeom.attributes.position.array;
+			let indices = indexedBufferGeom.index.array;
 
-			var numIdxVertices = idxVertices.length / 3;
-			var numVertices = vertices.length / 3;
+			const numIdxVertices = idxVertices.length / 3;
+			const numVertices = vertices.length / 3;
 
 			bufGeometry.ammoVertices = idxVertices;
 			bufGeometry.ammoIndices = indices;
 			bufGeometry.ammoIndexAssociation = [];
 
-			for (var i = 0; i < numIdxVertices; i++) {
+			for (let i = 0; i < numIdxVertices; i++) {
 
-				var association = [];
+				let association = [];
 				bufGeometry.ammoIndexAssociation.push(association);
 
-				var i3 = i * 3;
+				const i3 = i * 3;
 
-				for (var j = 0; j < numVertices; j++) {
+				for (let j = 0; j < numVertices; j++) {
 
-					var j3 = j * 3;
+					const j3 = j * 3;
 					if (isEqual(idxVertices[i3], idxVertices[i3 + 1], idxVertices[i3 + 2],
 						vertices[j3], vertices[j3 + 1], vertices[j3 + 2])) {
 
@@ -792,7 +797,7 @@
 
 			processGeometry(bufferGeom);
 
-			var volume = new THREE.Mesh(bufferGeom, volumeMat);
+			let volume = new THREE.Mesh(bufferGeom, volumeMat);
 			volume.castShadow = true;
 			volume.receiveShadow = true;
 			volume.frustumCulled = false;
@@ -800,14 +805,14 @@
 
 			// Volume physic object
 
-			var volumeSoftBody = softBodyHelpers.CreateFromTriMesh(
+			let volumeSoftBody = softBodyHelpers.CreateFromTriMesh(
 				physicsWorld.getWorldInfo(),
 				bufferGeom.ammoVertices,
 				bufferGeom.ammoIndices,
 				bufferGeom.ammoIndices.length / 3,
 				true);
 
-			var sbConfig = volumeSoftBody.get_m_cfg();
+			let sbConfig = volumeSoftBody.get_m_cfg();
 			sbConfig.set_viterations(40);
 			sbConfig.set_piterations(40);
 
@@ -840,11 +845,11 @@
 
 		function createParalellepiped(sx, sy, sz, mass, pos, quat, material) {
 
-			var threeObject = new THREE.Mesh(new THREE.BoxBufferGeometry(sx, sy, sz, 1, 1, 1), material);
-			var shape = new Ammo.btBoxShape(new Ammo.btVector3(sx * 0.5, sy * 0.5, sz * 0.5));
+			let threeObject = new THREE.Mesh(new THREE.BoxBufferGeometry(sx, sy, sz, 1, 1, 1), material);
+			let shape = new Ammo.btBoxShape(new Ammo.btVector3(sx * 0.5, sy * 0.5, sz * 0.5));
 			shape.setMargin(margin);
 
-			var rb = createRigidBody(threeObject, shape, mass, pos, quat);
+			let rb = createRigidBody(threeObject, shape, mass, pos, quat);
 
 			return [threeObject, rb];
 
@@ -853,10 +858,10 @@
 		function createParalellepiped3(threeObject, mass, pos, quat, material) {
 
 			//var threeObject = new THREE.Mesh(new THREE.BoxBufferGeometry(sx, sy, sz, 1, 1, 1), material);
-			var shape = new Ammo.btBoxShape(new Ammo.btVector3(threeObject.geometry.parameters.width * 0.5, threeObject.geometry.parameters.height * 0.5, threeObject.geometry.parameters.depth * 0.5));
+			let shape = new Ammo.btBoxShape(new Ammo.btVector3(threeObject.geometry.parameters.width * 0.5, threeObject.geometry.parameters.height * 0.5, threeObject.geometry.parameters.depth * 0.5));
 			shape.setMargin(margin);
 
-			var rb = createRigidBody(threeObject, shape, mass, pos, quat);
+			const rb = createRigidBody(threeObject, shape, mass, pos, quat);
 
 			return [threeObject, rb];
 
@@ -908,6 +913,8 @@
 			huh.addEventListener('touchstart', showCreds);
 
 			renderer.domElement.addEventListener('dblclick', saveImage);
+
+			document.body.classList.remove('loading');
 		}
 
 		function showCreds(e) {
@@ -960,6 +967,7 @@
 
 		function letsBegin() {
 			Tone.context.resume()
+			Tone.Master.volume.rampTo(-10, '1s');
 
 			document.body.classList.add('start');
 
@@ -967,6 +975,8 @@
 
 			const welcome = document.getElementById('welcome');
 			welcome.parentElement.removeChild(welcome);
+
+			animate();
 
 			window.addEventListener('mousedown', function (event) {
 
@@ -1049,25 +1059,26 @@
 		function trackIntersectingPoints(collisionObject, y) {
 
 			// How much of a margin do we want?
-			var play = .1;
+			const play = .1;
+			const stageXZrange = 20; // absolute value; within what X,Z do we want to consider points
 
 			if (collisionObject.hasOwnProperty('collided') == false)
 				collisionObject.collided = false;
 
-			// I guess this is neccesary to get the current data
-			collisionObject.updateMatrix();
+			// I guess this is neccesary to get the current data (or not...?)
+			//collisionObject.updateMatrix();
 
 			// Initalize collisionObject.trackedPointIndicies if not already
 			if (collisionObject.hasOwnProperty('trackedPointIndicies') === false) {
 				collisionObject.trackedPointIndicies = [];
 			}
 
-			var vec = new THREE.Vector3();
-			var attribute = collisionObject.geometry.attributes.position; // we want the position data
-			for (var i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
+			let vec = new THREE.Vector3();
+			let attribute = collisionObject.geometry.attributes.position; // we want the position data
+			for (let i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
 				vec.fromBufferAttribute(attribute, i); // extract the x,y,z coordinates
 				vec.applyMatrix4(collisionObject.matrix); // apply the mesh's matrix transform
-				if (Math.abs(y - vec.y) < play && Math.abs(vec.x) < 20 && Math.abs(vec.z) < 20) {
+				if (Math.abs(y - vec.y) < play && Math.abs(vec.x) < stageXZrange && Math.abs(vec.z) < stageXZrange) {
 					//add the current point to teh tracking array
 					if (collisionObject.trackedPointIndicies.includes(i) === false) {
 						collisionObject.trackedPointIndicies.push(i);
@@ -1078,7 +1089,7 @@
 						++collisionCount;
 						//console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
-						//// undo this
+
 						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
 
@@ -1099,7 +1110,7 @@
 				// capture current position of all tracked points
 				if (collisionObject.trackedPointIndicies.includes(i)) {
 					// capture this moment in time
-					var e = vec.clone();
+					let e = vec.clone();
 					e.o = collisionObject.pointColor;
 					intersectionals.push(e);
 				}
@@ -1108,14 +1119,14 @@
 
 		function markIntersectingPoints(collisionObject, y) {
 			// How much of a margin do we want? (For detection in the y axis)
-			var play = .1;
+			const play = .1;
 
 			// I guess this is neccesary to get the current data
 			collisionObject.updateMatrix();
 
 			var vec = new THREE.Vector3();
 			var attribute = collisionObject.geometry.attributes.position; // we want the position data
-			for (var i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
+			for (let i = 0; i < collisionObject.geometry.attributes.position.count; i++) {
 				vec.fromBufferAttribute(attribute, i); // extract the x,y,z coordinates
 				vec.applyMatrix4(collisionObject.matrix); // apply the mesh's matrix transform
 				if (Math.abs(y - vec.y) < play && Math.abs(vec.x) < 20 && Math.abs(vec.z) < 20) { // "20" keeps it more or less within bounds of the stage
@@ -1128,26 +1139,26 @@
 
 		var cutSectionals;
 		function winnowIntersectionals() {
-			var tolerance = 1;
-			var minPointsTogether = 3;
+			const tolerance = 1;
+			const minPointsTogether = 3;
 
 			//console.log('before: ' + intersectionals.length);
 
 			//Try to find each intersectional's nearest neighbor, and if that's larger than TOLERANCE, remove it
-			for (var i = 0; i < intersectionals.length; i++) {
-				var shortestDistance = Infinity;
-				var pointsUnderTolerance = 0;
+			for (let i = 0; i < intersectionals.length; i++) {
+				let shortestDistance = Infinity;
+				let pointsUnderTolerance = 0;
 				intersectionals[i].d = 0;
-				for (var j = 0; j < intersectionals.length; j++) {
+				for (let j = 0; j < intersectionals.length; j++) {
 					if (i === j)
 						continue;
 
-					var x1 = intersectionals[i].x;
-					var x2 = intersectionals[j].x;
-					var y1 = intersectionals[i].y;
-					var y2 = intersectionals[j].y;
-					var z1 = intersectionals[i].z;
-					var z2 = intersectionals[j].z;
+					const x1 = intersectionals[i].x;
+					const x2 = intersectionals[j].x;
+					const y1 = intersectionals[i].y;
+					const y2 = intersectionals[j].y;
+					const z1 = intersectionals[i].z;
+					const z2 = intersectionals[j].z;
 
 					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
 
@@ -1166,8 +1177,8 @@
 			intersectionals.sort((a, b) => a.d - b.d);
 
 			// Keep the bottom 50%, subtract the bottom 5%
-			var toKeep = Math.round(intersectionals.length * .8);
-			var toCutout = Math.round(intersectionals.length * .2);
+			const toKeep = Math.round(intersectionals.length * .8);
+			const toCutout = Math.round(intersectionals.length * .2);
 			cutSectionals = intersectionals.slice(0, toCutout);
 			intersectionals.splice(toKeep, intersectionals.length - toKeep);
 
@@ -1201,28 +1212,28 @@
 
 		var intersectionalGroups = [];
 		function winnowIntersectionals2() {
-			var groupMinimumSize = 5;
-			var groupingThreshold = 10; // The max distance between any two points for them to be "grouped"
-			var maximumShortestDistance = 2; // The max distance from any other point above which we cull the point; in other words, how much of an outlier this point is
+			const groupMinimumSize = 5;
+			const groupingThreshold = 10; // The max distance between any two points for them to be "grouped"
+			const maximumShortestDistance = 2; // The max distance from any other point above which we cull the point; in other words, how much of an outlier this point is
 
 			//console.log('before: ' + intersectionals.length);
 
 			//1. Calculate delta D for all points P
-			for (var i = 0; i < intersectionals.length; i++) {
+			for (let i = 0; i < intersectionals.length; i++) {
 				var shortestDistance = Infinity;
 				intersectionals[i].dt = 0;
-				for (var j = 0; j < intersectionals.length; j++) {
+				for (let j = 0; j < intersectionals.length; j++) {
 					if (i === j)
 						continue;
 
-					var x1 = intersectionals[i].x;
-					var x2 = intersectionals[j].x;
-					var y1 = intersectionals[i].y;
-					var y2 = intersectionals[j].y;
-					var z1 = intersectionals[i].z;
-					var z2 = intersectionals[j].z;
+					const x1 = intersectionals[i].x;
+					const x2 = intersectionals[j].x;
+					const y1 = intersectionals[i].y;
+					const y2 = intersectionals[j].y;
+					const z1 = intersectionals[i].z;
+					const z2 = intersectionals[j].z;
 
-					var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+					const dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
 
 					intersectionals[i].dt += dist;
 
@@ -1238,22 +1249,22 @@
 			intersectionals.sort((a, b) => a.d - b.d);
 
 			//2. Take the point with lowest delta D as a starting point
-			var pointWithLowestDeltaD = intersectionals[0];
+			let pointWithLowestDeltaD = intersectionals[0];
 
 			//3. Group with other nearby points
-			var intersectionalGroup = [];
+			let intersectionalGroup = [];
 			intersectionalGroup.push(pointWithLowestDeltaD);
 			intersectionals.splice(0, 1);
-			for (var j = 0; j < intersectionals.length; j++) {
+			for (let j = 0; j < intersectionals.length; j++) {
 
-				var x1 = pointWithLowestDeltaD.x;
-				var x2 = intersectionals[j].x;
-				var y1 = pointWithLowestDeltaD.y;
-				var y2 = intersectionals[j].y;
-				var z1 = pointWithLowestDeltaD.z;
-				var z2 = intersectionals[j].z;
+				const x1 = pointWithLowestDeltaD.x;
+				const x2 = intersectionals[j].x;
+				const y1 = pointWithLowestDeltaD.y;
+				const y2 = intersectionals[j].y;
+				const z1 = pointWithLowestDeltaD.z;
+				const z2 = intersectionals[j].z;
 
-				var dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
+				const dist = Math.pow(Math.pow((x2 - x1), 2) + Math.pow((y2 - y1), 2) + Math.pow((z2 - z1), 2), .5);
 
 				if (dist <= groupingThreshold) {
 					intersectionalGroup.push(intersectionals[j])
@@ -1287,18 +1298,18 @@
 			//var loader = new THREE.TextureLoader();
 			//var texture = loader.load( 'textures/sprites/snowflake7_alpha.png' );
 
-			var allIntersections = [].concat.apply([], intersectionalGroups);
+			const allIntersections = [].concat.apply([], intersectionalGroups);
 			// Group the points by color
 			//console.log(allIntersections);
-			var pointsByStyle = groupBy(allIntersections, 'o');
+			const pointsByStyle = groupBy(allIntersections, 'o');
 			//console.log('hh');
 			//console.log(pointsByStyle);
 			for (var key in pointsByStyle) {
 				//console.log('h');
 				//console.log(key);
-				var pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, sizeAttenuation: true, alphaTest: 0.3 });
-				var pointsGeometry = new THREE.BufferGeometry().setFromPoints(pointsByStyle[key]);
-				var p = new THREE.Points(pointsGeometry, pointsMaterial);
+				const pointsMaterial = new THREE.PointsMaterial({ color: key, size: .5, sizeAttenuation: true, alphaTest: 0.3 });
+				const pointsGeometry = new THREE.BufferGeometry().setFromPoints(pointsByStyle[key]);
+				const p = new THREE.Points(pointsGeometry, pointsMaterial);
 				points.push(p);
 				scene.add(p);
 			}
@@ -1348,8 +1359,8 @@
 			theThings = [];
 
 			// Create the new things
-			var geometries = [];
-			var itemsWithinStage = 0;
+			let geometries = [];
+			let itemsWithinStage = 0;
 			intersectionalGroups.forEach(function (g) {
 				//console.log('solidifying...');
 				//console.log(g);
@@ -1375,7 +1386,7 @@
 
 				// calculate their center
 				cmesh.geometry.computeBoundingBox();
-				var center = new THREE.Vector3();
+				const center = new THREE.Vector3();
 				cmesh.geometry.boundingBox.getCenter(center);
 				cmesh.localToWorld(center);
 				cmesh.geometry.worldcenter = center;
@@ -1394,8 +1405,8 @@
 			const avgZ = geometries.reduce((a, c) => a + c.worldcenter.z, 0) / geometries.length;
 			//console.log(avgX + ',' + avgZ);
 			if (itemsWithinStage <= (geometries.length - itemsWithinStage)) {
-				var shiftX = 0;
-				var shiftZ = 0;
+				let shiftX = 0;
+				let shiftZ = 0;
 				if (avgX < -15 || avgX > 15)
 					shiftX = (avgX % 15) + ((Math.floor(avgX / 15) - (avgX > 0 ? 1 : -1)) * 15);
 				if (avgZ < -15 || avgZ > 15)
@@ -1418,7 +1429,7 @@
 			// wait for the thing to pass below the stage and recreate it
 			setTimeout(function () {
 				geometries.forEach(function (g) {
-					var thing = createSoftVolume(g, 200, .1);
+					let thing = createSoftVolume(g, 200, .1);
 					theThings.push(thing);
 					//console.log('added thing');
 				});
@@ -1452,44 +1463,6 @@
 			volumeMatOld.opacity -= .004;
 		}
 
-		//function solidifyIntersectionals2() {
-		//	//Method two: Manual arrangment
-
-		//	// Sort into quadrants
-		//	for (var i = 0; i < intersectionals.length; i++) {
-		//		intersectionals[i].rad = Math.atan2(intersectionals[i].z, intersectionals[i].x);
-		//	}
-
-		//	//intersectionals.sort((a, b) => b.y - a.y);
-
-		//	// Dirty thing: turn the vecsBelow into a typed array
-		//	var t = new Float32Array(intersectionals.length * 3);
-		//	for (var i = 0; i < t.length; i += 3) {
-		//		t[i] = intersectionals[i / 3].x;
-		//		t[i + 1] = intersectionals[i / 3].y;
-		//		//t[i + 1] = y;
-		//		t[i + 2] = intersectionals[i / 3].z;
-		//	}
-
-		//	var rgeometry = new THREE.BufferGeometry();
-		//	rgeometry.addAttribute('position', new THREE.BufferAttribute(t, 3));
-		//	THREE.BufferGeometryUtils.mergeVertices(rgeometry);
-		//	rgeometry.computeFaceNormals();
-		//	rgeometry.computeVertexNormals();
-
-		//	var rmaterial = new THREE.MeshLambertMaterial({ color: 0xffff00, opacity: 0.9, transparent: true });
-		//	var rmesh = new THREE.Mesh(rgeometry, rmaterial);
-		//	//scene.add(rmesh);
-		//	console.log(rmesh);
-
-		//	setTimeout(function () {
-		//		scene.remove(theThing);
-		//		var thing = createSoftVolume(rgeometry, 9, 40);
-		//		theThing = thing;
-		//	}, 5000);
-
-		//}
-
 		var fr = 1;
 		var tw = 0;
 		function animate() {
@@ -1506,7 +1479,7 @@
 						theThings.forEach(function (t) {
 							trackIntersectingPoints(t, 3);
 						});
-						for (var t = 0; t < 2; t++) {
+						for (let t = 0; t < 2; t++) {
 							if (eye[t])
 								trackIntersectingPoints(eye[t], 1);
 						}
@@ -1530,14 +1503,12 @@
 		}
 
 		function render() {
-
-			var deltaTime = clock.getDelta();
+			const deltaTime = clock.getDelta();
 
 			// Make thing face camera
-			for (var i = 0, il = cameraFacingThings.length; i < il; i++) {
-				cameraFacingThings[i].lookAt(camera.position);
-			}
-
+			//for (var i = 0, il = cameraFacingThings.length; i < il; i++) {
+			//	cameraFacingThings[i].lookAt(camera.position);
+			//}
 
 			updatePhysics(deltaTime);
 
@@ -1555,31 +1526,31 @@
 			physicsWorld.stepSimulation(deltaTime, 10);
 
 			// Update soft volumes
-			for (var i = 0, il = softBodies.length; i < il; i++) {
+			for (let i = 0, il = softBodies.length; i < il; i++) {
 
-				var volume = softBodies[i];
-				var geometry = volume.geometry;
-				var softBody = volume.userData.physicsBody;
-				var volumePositions = geometry.attributes.position.array;
-				var volumeNormals = geometry.attributes.normal.array;
-				var association = geometry.ammoIndexAssociation;
-				var numVerts = association.length;
-				var nodes = softBody.get_m_nodes();
-				for (var j = 0; j < numVerts; j++) {
+				let volume = softBodies[i];
+				let geometry = volume.geometry;
+				let softBody = volume.userData.physicsBody;
+				let volumePositions = geometry.attributes.position.array;
+				let volumeNormals = geometry.attributes.normal.array;
+				let association = geometry.ammoIndexAssociation;
+				let numVerts = association.length;
+				let nodes = softBody.get_m_nodes();
+				for (let j = 0; j < numVerts; j++) {
 
-					var node = nodes.at(j);
-					var nodePos = node.get_m_x();
-					var x = nodePos.x();
-					var y = nodePos.y();
-					var z = nodePos.z();
-					var nodeNormal = node.get_m_n();
-					var nx = nodeNormal.x();
-					var ny = nodeNormal.y();
-					var nz = nodeNormal.z();
+					let node = nodes.at(j);
+					let nodePos = node.get_m_x();
+					let x = nodePos.x();
+					let y = nodePos.y();
+					let z = nodePos.z();
+					let nodeNormal = node.get_m_n();
+					let nx = nodeNormal.x();
+					let ny = nodeNormal.y();
+					let nz = nodeNormal.z();
 
-					var assocVertex = association[j];
+					let assocVertex = association[j];
 
-					for (var k = 0, kl = assocVertex.length; k < kl; k++) {
+					for (let k = 0, kl = assocVertex.length; k < kl; k++) {
 
 						var indexVertex = assocVertex[k];
 						volumePositions[indexVertex] = x;
@@ -1601,16 +1572,16 @@
 			}
 
 			// Update rigid bodies
-			for (var i = 0, il = rigidBodies.length; i < il; i++) {
+			for (let i = 0, il = rigidBodies.length; i < il; i++) {
 
-				var objThree = rigidBodies[i];
-				var objPhys = objThree.userData.physicsBody;
-				var ms = objPhys.getMotionState();
+				let objThree = rigidBodies[i];
+				let objPhys = objThree.userData.physicsBody;
+				let ms = objPhys.getMotionState();
 				if (ms) {
 
 					ms.getWorldTransform(transformAux1);
-					var p = transformAux1.getOrigin();
-					var q = transformAux1.getRotation();
+					let p = transformAux1.getOrigin();
+					let q = transformAux1.getRotation();
 					objThree.position.set(p.x(), p.y(), p.z());
 					objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
 
