@@ -481,7 +481,7 @@
 		function initSound() {
 			Tone.Master.volume.value = -99; // without setting this, Chrome seems to crack up. like, too much.
 
-			reverb = new Tone.JCReverb(.8);
+			reverb = new Tone.JCReverb(.2);
 			let wide = new Tone.StereoWidener(.8).toMaster();
 			let narrow = new Tone.StereoWidener(.2).toMaster();
 			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
@@ -515,7 +515,7 @@
 			//camera.rotation.x = -1.5;
 
 			renderer = new THREE.WebGLRenderer({
-				//preserveDrawingBuffer: true // to enable saving images
+				preserveDrawingBuffer: true // to enable saving images -- performance hit tho
 			});
 			renderer.setPixelRatio(window.devicePixelRatio);
 			renderer.setSize(window.innerWidth, window.innerHeight);
@@ -952,22 +952,57 @@
 			tcanvas.height = renderer.domElement.height;
 			tcanvas.width = renderer.domElement.width;
 
-			tcanvas.toBlob(function (blob) {
-				createImageBitmap(blob).then(
-					b => {
-						tcanvas.getContext('2d').putImageData(b, 0, 0);
-						document.body.appendChild(tcanvas);
-						//tcanvas.toBlob(bb => saveAs(bb, "unimag.png"));
+			var img = new Image();
+			img.onload = function () {
+				tcanvas.getContext('2d').drawImage(this, 0, 0);
+
+				// now load our watermark
+				var watermark = new Image();
+				watermark.onload = function () {
+					// let's keep it to at most 10% of the width of the final image (if landscape) or 50% (if portrait)...
+					let maxWatermarkWidth = img.width * (img.width > img.height ? .1 : .5);
+					let wmWidth = this.width;
+					let wmHeight = this.height;
+
+					if (wmWidth  > maxWatermarkWidth) {
+						const whRatio = this.height / this.width;
+						wmWidth = maxWatermarkWidth;
+						wmHeight = wmWidth * whRatio;
 					}
-				)
-				document.body.classList.remove('screenshot');
-				//saveAs(blob, "unimaginable.png");
-			});
+
+					const wmOffsetY = 10;
+					const wmOffsetX = (img.width / 2) - (wmWidth / 2);
+
+					tcanvas.getContext('2d').drawImage(this, wmOffsetX, wmOffsetY, wmWidth, wmHeight);
+
+					tcanvas.toBlob(bb => saveAs(bb, "unimag.png"));
+
+				};
+
+				watermark.src = 'watermark.png';
+			};
+			img.src = renderer.domElement.toDataURL();
+
+
+
+			//renderer.domElement.toBlob(function (blob) {
+			//	createImageBitmap(blob).then(
+			//		b => {
+			//			console.log(b);
+			//			tcanvas.getContext('2d').putImageData(b, 0, 0);
+			//			//document.body.appendChild(tcanvas);
+			//			tcanvas.toBlob(bb => saveAs(bb, "unimag.png"));
+			//		}
+			//	)
+			//	document.body.classList.remove('screenshot');
+			//	//saveAs(blob, "unimaginable.png");
+			//});
 		}
 
 		function letsBegin() {
 			Tone.context.resume()
 			Tone.Master.volume.rampTo(-10, '1s');
+			reverb.roomSize.rampTo(1, '2s')
 
 			document.body.classList.add('start');
 
@@ -1052,7 +1087,7 @@
 			camera.updateProjectionMatrix();
 
 			renderer.setSize(window.innerWidth, window.innerHeight);
-
+			composer.setSize( window.innerWidth, window.innerHeight );
 		}
 
 		var tcollision = false;
@@ -1455,7 +1490,7 @@
 				p.position.y -= .05;
 				p.scale.z += .002;
 				p.scale.x += .002;
-				p.updateMatrix();
+				//p.updateMatrix();
 				p.material.size -= .005;
 
 			});
@@ -1466,11 +1501,16 @@
 		var fr = 1;
 		var tw = 0;
 		function animate() {
-
 			requestAnimationFrame(animate);
 
 			render();
 
+			findIntersections();
+
+			//stats.update();
+		}
+
+		function findIntersections() {
 			// Mark any intersecting points
 			if (fr++ % 3 == 0) {
 				fr = 1;
@@ -1497,9 +1537,6 @@
 					--tw;
 				}
 			}
-
-			//stats.update();
-
 		}
 
 		function render() {
@@ -1515,7 +1552,7 @@
 			processClick();
 
 			// the below add shaders
-			renderer.render(scene, camera);
+			//renderer.render(scene, camera);
 			composer.render(deltaTime);
 
 		}
