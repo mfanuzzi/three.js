@@ -342,7 +342,7 @@
 			if (collisionCount % 20 === 0) {
 				reverb.roomSize.rampTo(.9, '2s')
 				setTimeout(() => {
-					synth.releaseAll(); // this may no longer be neccesary
+					//synth.releaseAll(); // this may no longer be neccesary
 					reverb.roomSize.rampTo(1.2, '2s')
 				}, 4000);
 				determineNewPitches();
@@ -374,7 +374,7 @@
 		}
 		function determineNewPitches() {
 			// Make the whole stage one scale
-			const tonic = new teoria.note(notemap[2][2]);
+			let tonic = new teoria.note(notemap[2][2]);
 			if (tonic.key() > 60)
 				tonic = teoria.note.fromKey(tonic.key() - 12);
 			for (let i = 0; i < notemap.length; i++) {
@@ -437,7 +437,7 @@
 
 			if (detune === true) {
 				setTimeout(function () {
-					syn.set("detune", -200, 10);
+					syn.set("detune", -300, 10);
 				}, 2000);
 			}
 		}
@@ -486,7 +486,7 @@
 			let narrow = new Tone.StereoWidener(.2).toMaster();
 			synth = new Tone.PolySynth(5, Tone.Synth).chain(narrow);
 			synth2 = new Tone.PolySynth(5, Tone.Synth).chain(wide);
-			synth2.voices.forEach(v => v.portamento = 1);
+			synth2.voices.forEach(v => v.portamento = 2);
 
 			synth.volume = -8;
 			synth2.volume = -2;
@@ -521,6 +521,8 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.shadowMap.enabled = true;
 			container.appendChild(renderer.domElement);
+
+			renderer.domElement.addEventListener('touchstart', handleMultiTouch);
 
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.target.set(0, -10, 0);
@@ -720,7 +722,7 @@
 			//createParalellepiped(40, 40, 1, 0, new THREE.Vector3(0, 30, -25), quat, new THREE.MeshPhongMaterial({ color: 0x333333 }));
 
 			createEye();
-			pos.y = 25;
+			pos.y = 15;
 			quat.set(0, 0, 0, 1);
 
 			// Create soft volumes
@@ -999,6 +1001,12 @@
 			//});
 		}
 
+		function handleMultiTouch(e) {
+			if (e.touches.length === 3) {
+				saveImage();
+			}
+		} 
+
 		function letsBegin() {
 			Tone.context.resume()
 			Tone.Master.volume.rampTo(-10, '1s');
@@ -1045,13 +1053,15 @@
 				gravZ = camera.position.z / -10;
 
 				// Limit sideways gravitation to +/- 5.
-				if (gravX < -5) gravx = -3;
-				if (gravX > 5) gravx = 3;
-				if (gravZ < -5) gravz = -3;
-				if (gravZ > 5) gravz = 3;
+				if (gravX < -3) gravX = -3;
+				if (gravX > 3) gravX = 3;
+				if (gravZ < -3) gravZ = -3;
+				if (gravZ > 3) gravZ = 3;
 
 				physicsWorld.setGravity(new Ammo.btVector3(gravX, gravityConstant, gravZ));
 				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(gravX, gravityConstant, gravZ));
+
+				//console.log('grav: ' + gravX + ',' + gravZ);
 
 				//raycaster.setFromCamera(mouseCoords, camera);
 
@@ -1125,8 +1135,8 @@
 						//console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
 
-						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
-						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 3, 0));
+						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
+						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
 
 						afterimagePass.uniforms["damp"].value = .999;
 
@@ -1375,21 +1385,23 @@
 		}
 
 		var frst = true;
-		var theOldThings;
+		var theOldThings = [];
 		function solidifyIntersectionals3() {
 			// Remove the old things
-			theOldThings = theThings;
-			theOldThings.forEach(function (t) {
+			theThings.forEach(function (t) {
 				t.material = volumeMatOld;
 			});
-			setTimeout(function () {
-				theOldThings.forEach(function (t) {
+			theOldThings.push(theThings);
+			// Upon having more than two "old things", remove the oldest
+			if (theOldThings.length > 2) {
+				theOldThings[0].forEach(function (t) {
 					t.geometry.dispose();
 					scene.remove(t);
 					physicsWorld.removeSoftBody(t.userData.physicsBody, true);
 					softBodies.splice(softBodies.indexOf(t), 1);
 				});
-			}, 7000);
+				theOldThings.shift();
+			}
 
 			theThings = [];
 
