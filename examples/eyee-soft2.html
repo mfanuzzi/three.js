@@ -1,8 +1,9 @@
 <html lang="en">
 <head>
-	<title>unimaginable, supercosmic, eternal somethings [LB011]</title>
+	<title>ｕｎｉｍａｇｉｎａｂｌｅ, 𝕤𝕦𝕡𝕖𝕣𝕔𝕠𝕤𝕞𝕚𝕔, 🇪🇹🇪🇷🇳🇦🇱 🇸🇴🇲🇪🇹🇭🇮🇳🇬🇸 [LB011]</title>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="shortcut icon" type="image/png" href="https://lazerbea.ms/img/favicon128.png" />
 	<style>
 		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-regular-webfont.woff) format("woff");font-weight:400;font-style:normal}
 		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-italic-webfont.woff) format("woff");font-weight:400;font-style:italic}
@@ -12,12 +13,17 @@
 		body {
 			color: #000;
 			font-family: 'Century Gothic',Adventor,sans-serif;
-			font-size: 28px;
+			font-size: 3vw;
 			text-align: center;
 			background-color: #fff;
 			margin: 0px;
 			cursor: grab;
 			overflow-x: hidden;
+		}
+		@media (orientation: portrait) {
+			body {
+				font-size: 6vw;
+			}
 		}
 
 		#info {
@@ -54,22 +60,31 @@
 			background: linear-gradient(#fff, #9198e5);
 			opacity: .3;
 		}
-		#welcome > div  {
-			height: 50%;
+		#welcome > div:first-child  {
+			height: 25%;
 		}
+
+		#logo {
+			background: url('https://lazerbea.ms/img/logo.svg') no-repeat 0 bottom;
+			background-size: auto 100%;
+		}
+
 		@media (orientation: portrait) {
 			#welcome > div:first-child {
 				height: 15%;
 			}
+			#logo {
+				background-position: right 11vw bottom;
+			}
 		}
-		#logo {
-			background: url('https://lazerbea.ms/img/logo.svg') no-repeat -10vw bottom;
-			background-size: 100% auto;
-		}
+
 		#loadin {
 			background-color: #d21888;
 			color: #fff;
 			padding: 1em;
+		}
+		#loadin p {
+			margin: 0;
 		}
 		button {
 			padding-right: 1.72209em;
@@ -80,7 +95,7 @@
 			color: #fff;
 			animation: 2s infinite alternate gloooo;
 			text-shadow: .05em 0.25em 0px black;
-			border-width: 1em;
+			border-width: .5em;
 			position: absolute;
 			z-index: 666;
 			left: 1em;
@@ -96,7 +111,7 @@
 			100% { background-color: #18d1bd; }
 		}
 		#begin {
-
+			margin-top: .25em;
 		}
 		#huh {
 			width: auto;
@@ -105,6 +120,7 @@
 			padding: 0;
 			top: 0;
 			font-size: 2vw;
+			border-width: 1em;
 		}
 		#creds {
 			position: absolute;
@@ -145,7 +161,7 @@
 				<br /><em style="letter-spacing: .5em">&ldquo;unimaginable, supercosmic, eternal somethings</em>&rdquo;
 			</p>
 			<p>
-				<span id="loadMsg">loading...</span>
+				<span id="loadMsg">𝚕𝚘𝚊𝚍𝚒𝚗𝚐...</span>
 				<button id="begin">begin feel</button>
 				<button id="huh">?</button>
 			</p>
@@ -158,9 +174,6 @@
 				by <a href="https://lazerbea.ms">lazerbea.ms</a>
 			</p>
 		</div>
-	</div>
-	<div id="hud">
-		<canvas id="screenshot" />
 	</div>
 
 	<script src="js/three.min.js"></script>
@@ -245,6 +258,8 @@
 		var lastX = 0;
 		var lastY = 0;
 
+		var isControllingOrbit = false;
+
 		// audio variables
 		var reverb;
 
@@ -318,6 +333,16 @@
 			['D7', 'F6', 'C7', 'A7', 'F#6', 'F7'],
 			['C#7', 'A#6', 'D#6', 'G#6', 'C#6', 'F#7'],
 			['C7', 'B7', 'A#7', 'A7', 'G#7', 'G7']
+		];
+
+		// some interesting camera positions (taken at full-width desktop; do we transform these somehow for the more limited scope of mobile?)
+		var cameraPositions = [
+			new THREE.Vector3(-4, 70, 10),
+			new THREE.Vector3(42, -13, 41),
+			new THREE.Vector3(-3.4, 2.5, 34),
+			new THREE.Vector3(-4, 38, 29),
+			new THREE.Vector3(41, 18, 26),
+			new THREE.Vector3(-6.6, 34, 25)
 		];
 
 
@@ -523,6 +548,7 @@
 			container.appendChild(renderer.domElement);
 
 			renderer.domElement.addEventListener('touchstart', handleMultiTouch);
+			renderer.domElement.addEventListener('touchend', handleMultiTouch);
 
 			controls = new THREE.OrbitControls(camera, renderer.domElement);
 			controls.target.set(0, -10, 0);
@@ -907,8 +933,7 @@
 
 		function initInput() {
 			const but = document.getElementById('begin');
-			but.addEventListener('mousedown', letsBegin);
-			but.addEventListener('touchstart', letsBegin);
+			but.addEventListener('click', letsBegin);
 
 			const huh = document.getElementById('huh');
 			huh.addEventListener('mousedown', showCreds);
@@ -1002,9 +1027,13 @@
 		}
 
 		function handleMultiTouch(e) {
-			if (e.touches.length === 3) {
-				saveImage();
+			if (e.type === "touchstart") {
+				if (e.touches.length === 3) {
+					saveImage();
+				}
 			}
+
+			isControllingOrbit = (e.touches.length > 0);
 		} 
 
 		function letsBegin() {
@@ -1013,6 +1042,7 @@
 			reverb.roomSize.rampTo(1, '2s')
 
 			document.body.classList.add('start');
+			window.scrollTo(0, 0);
 
 			createObjects();
 
@@ -1022,6 +1052,7 @@
 			animate();
 
 			window.addEventListener('mousedown', function (event) {
+				isControllingOrbit = true;
 
 				if (!clickRequest) {
 
@@ -1036,6 +1067,9 @@
 
 			}, false);
 
+			window.addEventListener('mouseup', function (event) {
+				isControllingOrbit = false;
+			});
 		}
 
 		function processClick() {
@@ -1475,6 +1509,12 @@
 
 			// wait for the thing to pass below the stage and recreate it
 			setTimeout(function () {
+				if (isControllingOrbit === false) {
+					let pos = cameraPositions[getRandomInt(0, cameraPositions.length - 1)];
+					camera.position.set(pos.x, pos.y, pos.z);
+					controls.update();
+				}
+
 				geometries.forEach(function (g) {
 					let thing = createSoftVolume(g, 200, .1);
 					theThings.push(thing);
