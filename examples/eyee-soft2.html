@@ -188,8 +188,8 @@
 				<li>press any other key to <strong>see a new perspective</strong>.</li>
 			</ul>
 			<ul class="mobile">
-				<li>tap three (3) fingers to <strong>capture a moment</strong>.</li>
-				<li>tap four (4) fingers to <strong>see a new perspective</strong>.</li>
+				<li>tap three (3) fingers to <strong>see a new perspective</strong>.</li>
+				<li>tap four (4) fingers to <strong>capture a moment</strong>.</li>
 			</ul>
 			<p>
 				by <a href="https://lazerbea.ms">lazerbea.ms</a>
@@ -203,7 +203,6 @@
 	<script src="js/utils/BufferGeometryUtils.js"></script>
 	<script src="js/WebGL.js"></script>
 	<script src="js/loaders/GLTFLoader.js"></script>
-	<!--<script src="js/libs/stats.min.js"></script>-->
 	<script src="js/postprocessing/EffectComposer.js"></script>
 	<script src="js/postprocessing/RenderPass.js"></script>
 	<script src="js/postprocessing/ShaderPass.js"></script>
@@ -227,10 +226,8 @@
 	<script>
 
 		if (THREE.WEBGL.isWebGLAvailable() === false) {
-
-			document.body.appendChild(THREE.WEBGL.getWebGLErrorMessage());
+			document.getElementById('loadin').appendChild(THREE.WEBGL.getWebGLErrorMessage());
 			document.getElementById('container').innerHTML = "";
-
 		}
 
 		// Graphics variables
@@ -337,7 +334,7 @@
 		//];
 
 		//v3: chromatic at edges, Fmaj7 center, minor filling
-		var notemap = [
+		const notemapInit = [
 			['A3', 'A#3', 'B3', 'C3', 'C#3', 'D3'],
 			['E3', 'G4', 'D4', 'A4', 'E4', 'D#3'],
 			['D#', 'C4', 'E5', 'F5', 'B4', 'E3'],
@@ -345,6 +342,7 @@
 			['C#3', 'A#4', 'D#4', 'G#4', 'C#4', 'F#3'],
 			['C3', 'B3', 'A#3', 'A3', 'G#3', 'G3']
 		];
+		var notemap = JSON.parse(JSON.stringify(notemapInit));
 		var notemaphi = [
 			['A7', 'A#7', 'B7', 'C7', 'C#7', 'D7'],
 			['E7', 'G6', 'D6', 'A6', 'E6', 'D#7'],
@@ -391,6 +389,7 @@
 			}
 
 			// perhaps every cycle of 10x2, we should shuffle the pitches?
+			// (the problem is this happens for each hit, of course)
 			if (collisionCount % 20 === 0) {
 				reverb.roomSize.rampTo(.9, '2s')
 				setTimeout(() => {
@@ -419,6 +418,12 @@
 			'min11b5',
 			'#12'
 		];
+		const scales = [
+			'dorian',
+			'phrygian',
+			//'locrian', // this is too 'major'
+			'melodicminor'
+		]
 		function getRandomInt(min, max) {
 			min = Math.ceil(min);
 			max = Math.floor(max);
@@ -429,13 +434,16 @@
 			let tonic = new teoria.note(notemap[2][2]);
 			if (tonic.key() > 60)
 				tonic = teoria.note.fromKey(tonic.key() - 12);
+
+			const scaleName = scales[getRandomInt(0, scales.length - 1)];
+			console.log(scaleName);
+			const scale = tonic.scale(scaleName).notes();
 			for (let i = 0; i < notemap.length; i++) {
-				const scale = tonic.scale('phrygian').notes();
 				for (let j = 0; j < notemap[i].length; j++) {
 					notemap[i][j] = scale[getRandomInt(0, 6)].toString();
 				}
 			}
-
+			tonic = null
 
 			//// Take the middle note as the future tonic (TODO: instead make this the most popular note maybe?)
 			////const tonic = new teoria.note(notemap[2][2]);
@@ -455,8 +463,9 @@
 			// Make the 'hi' version that is just the above + 2 octaves
 			for (let i = 0; i < notemap.length; i++) {
 				for (let j = 0; j < notemap[i].length; j++) {
-					const t = new teoria.note(notemap[i][j]);
+					let t = new teoria.note(notemap[i][j]);
 					notemaphi[i][j] = teoria.note.fromKey(t.key() + 24).toString()
+					t = null;
 				}
 			}
 
@@ -489,7 +498,7 @@
 
 			if (detune === true) {
 				setTimeout(function () {
-					syn.set("detune", -300, 12);
+					syn.set("detune", -400, 10);
 				}, 2000);
 			}
 		}
@@ -629,12 +638,6 @@
 			light.shadow.mapSize.y = 1024;
 
 			scene.add(light);
-
-			//stats = new Stats();
-			//stats.domElement.style.position = 'absolute';
-			//stats.domElement.style.top = '0px';
-			//container.appendChild(stats.domElement);
-
 
 			window.addEventListener('resize', onWindowResize, false);
 
@@ -1000,7 +1003,7 @@
 			document.body.classList.remove('creds');
 			document.body.removeEventListener('mousedown', hideCreds);
 			document.body.removeEventListener('touchstart', hideCreds);
-			console.log(e.target.tagName.toLowerCase());
+
 			if (e.target.tagName.toLowerCase() !== "a") {
 				e.stopPropagation();
 			} else {
@@ -1052,11 +1055,11 @@
 
 		function handleMultiTouch(e) {
 			if (e.type === "touchstart") {
-				if (e.touches.length === 3) {
+				if (e.touches.length === 4) {
 					saveImage();
 				}
-				if (e.touches.length === 4) {
-					shiftPerspective();
+				if (e.touches.length === 3) {
+					shiftPerspective(true);
 				}
 			}
 
@@ -1064,7 +1067,7 @@
 		} 
 
 		function handleKeydown(e) {
-			console.log(e);
+			//console.log(e);
 			switch (e.keyCode) {
 				case 32: //space
 					saveImage();
@@ -1121,7 +1124,7 @@
 				gravX = (azimuthDiff * 3);
 				gravZ = 1;
 
-				console.log(camera.position);
+				//console.log(camera.position);
 				gravX = camera.position.x / -10;
 				gravZ = camera.position.z / -10;
 
@@ -1187,7 +1190,13 @@
 						physicsWorld.setGravity(slowGravity);
 						physicsWorld.getWorldInfo().set_m_gravity(slowGravity);
 
-						afterimagePass.uniforms["damp"].value = .999;
+						// at low framerates, the afterimage can make things too blank
+						if (FPSactual < 10)
+							afterimagePass.uniforms["damp"].value = .9;
+						else if (FPSactual < 20)
+							afterimagePass.uniforms["damp"].value = .98; 
+						else
+							afterimagePass.uniforms["damp"].value = .999;
 
 						volumeMatOld.opacity = volumeMat.opacity;
 
@@ -1566,6 +1575,9 @@
 		const targetFPS = 30;
 		const minInterval = 1000 / targetFPS;
 		var FPSdelta, FPSnow, FPSthen = Date.now(); 
+		var FPSelapsed = 0; // the time since the last "second" rolled over
+		var FPScurrent = 0; // the number of frames in the current period of 1s
+		var FPSactual = targetFPS;  // the number of frames in the last period of 1s
 
 		function animate() {
 			requestAnimationFrame(animate);
@@ -1576,14 +1588,24 @@
 				render();
 				findIntersections();
 				FPSthen = FPSnow - (FPSdelta % minInterval);
+				FPSelapsed += FPSdelta; // add this delta to the "elapsed" calculation
+				++FPScurrent;			// incriment the FPS counter
 			}
 
-			//stats.update();
+			if (FPSelapsed >= 1000) {
+				FPSactual += FPScurrent;
+				FPSactual /= 2;
+
+				FPScurrent = 0;
+				FPSelapsed -= 1000;
+			}
 		}
 
 		function findIntersections() {
 			// Mark any intersecting points
-			if (fr++ % 3 == 0) {
+			let frameFreq = (FPSactual <= 14 ? 2 : 3);
+
+			if (fr++ % frameFreq == 0) {
 				fr = 1;
 				if (intersectionals !== null) {
 					if (intersectionals.length < 2000) {
@@ -1610,8 +1632,8 @@
 			}
 		}
 
-		function shiftPerspective() {
-			if (isControllingOrbit === false) {
+		function shiftPerspective(force) {
+			if (isControllingOrbit === false || force === true) {
 				let pos = cameraPositions[getRandomInt(0, cameraPositions.length - 1)];
 				camera.position.set(pos.x, pos.y, pos.z);
 				controls.update();
