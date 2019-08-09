@@ -184,8 +184,8 @@
 				based upon actual events &amp; a dream about endless space / infinite renewal.
 			</p>
 			<ul class="desktop">
-				<li>double-click to <strong>capture a moment</strong>.</li>
-				<li>press any key to <strong>see a new perspective</strong>.</li>
+				<li>double-click or space to <strong>capture a moment</strong>.</li>
+				<li>press any other key to <strong>see a new perspective</strong>.</li>
 			</ul>
 			<ul class="mobile">
 				<li>tap three (3) fingers to <strong>capture a moment</strong>.</li>
@@ -250,6 +250,9 @@
 		var gravityConstant = -13;
 		var gravX = 0;
 		var gravZ = 0;
+		var slowGravity;
+		var normalGravity;
+
 		var physicsWorld;
 		var rigidBodies = [];
 		var softBodies = [];
@@ -359,6 +362,15 @@
 			new THREE.Vector3(-4, 38, 29),
 			new THREE.Vector3(41, 18, 26),
 			new THREE.Vector3(-6.6, 34, 25)
+		];
+
+		// titles for screenshots, selected randomly
+		const screenshotTitles = [
+			'unimaginable',
+			'supercosmic',
+			'eternal',
+			'somethings',
+			'lazerbeams'
 		];
 
 		var lastCollisionTimeout = null;
@@ -477,7 +489,7 @@
 
 			if (detune === true) {
 				setTimeout(function () {
-					syn.set("detune", -300, 10);
+					syn.set("detune", -300, 12);
 				}, 2000);
 			}
 		}
@@ -674,6 +686,8 @@
 		function initPhysics() {
 
 			// Physics configuration
+			slowGravity = new Ammo.btVector3(0, gravityConstant / 4, 0);
+			normalGravity = new Ammo.btVector3(0, gravityConstant, 0);
 
 			var collisionConfiguration = new Ammo.btSoftBodyRigidBodyCollisionConfiguration();
 			var dispatcher = new Ammo.btCollisionDispatcher(collisionConfiguration);
@@ -681,8 +695,8 @@
 			var solver = new Ammo.btSequentialImpulseConstraintSolver();
 			var softBodySolver = new Ammo.btDefaultSoftBodySolver();
 			physicsWorld = new Ammo.btSoftRigidDynamicsWorld(dispatcher, broadphase, solver, collisionConfiguration, softBodySolver);
-			physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
-			physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+			physicsWorld.setGravity(normalGravity);
+			physicsWorld.getWorldInfo().set_m_gravity(normalGravity);
 
 			transformAux1 = new Ammo.btTransform();
 			softBodyHelpers = new Ammo.btSoftBodyHelpers();
@@ -692,8 +706,8 @@
 
 		function createEye(meshToTarget) {
 			// Create rigid eye
-			var eyeMass = 5;
-			var eyeRadius = 2;
+			const eyeMass = 5;
+			const eyeRadius = 2;
 
 			// remove last round's old eyes
 			if (eye[2] !== null && eye[3] !== null) {
@@ -705,6 +719,8 @@
 				rigidBodies.splice(rigidBodies.indexOf(eye[3]), 1);
 				eye[2].geometry.dispose();
 				eye[3].geometry.dispose();
+				eye[2] = null;
+				eye[3] = null;
 			}
 
 			// save old eyes
@@ -722,11 +738,11 @@
 				eye[i].material.map.offset.x = .25;
 				eye[i].material.map.offset.y = .1;
 				eye[i].material.needsUpdate = true;
-				var eyeShape = new Ammo.btSphereShape(eyeRadius);
+				let eyeShape = new Ammo.btSphereShape(eyeRadius);
 				eyeShape.setMargin(margin);
 
-				var ipos = new THREE.Vector3();
-				var iquat = new THREE.Quaternion();
+				let ipos = new THREE.Vector3();
+				let iquat = new THREE.Quaternion();
 				ipos.set(0, 20, 0);
 				//iquat.set(0, 0, .25 * (i % 2 === 0 ? -1 : 1), 1);
 				iquat.set(0, 0, 0, 1);
@@ -745,7 +761,7 @@
 				ipos.x += (6.5 * i);
 				ipos.z += (1.3 * i);
 
-				var eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
+				let eyeBody = createRigidBody(eye[i], eyeShape, eyeMass, ipos, iquat);
 				eyeBody.setFriction(0.8);
 				eyeBody.applyLocalTorque(new Ammo.btVector3(0, 0, 3 * (i % 2 === 0 ? -1 : 1)))
 
@@ -794,6 +810,7 @@
 			mapIndices(bufGeometry, indexedBufferGeom);
 
 			posOnlyBufGeometry.dispose();
+			posOnlyBufGeometry = null;
 		}
 
 		function isEqual(x1, y1, z1, x2, y2, z2) {
@@ -962,7 +979,7 @@
 
 			if (isMobile === false) {
 				renderer.domElement.addEventListener('dblclick', saveImage);
-				document.addEventListener('keydown', shiftPerspective);
+				document.addEventListener('keydown', handleKeydown);
 			}
 
 			document.body.classList.remove('loading');
@@ -1024,7 +1041,7 @@
 
 					tcanvas.getContext('2d').drawImage(this, wmOffsetX, wmOffsetY, wmWidth, wmHeight);
 
-					tcanvas.toBlob(bb => saveAs(bb, "unimag.png"));
+					tcanvas.toBlob(bb => saveAs(bb, screenshotTitles[getRandomInt(0, screenshotTitles.length - 1)] + ".png"));
 
 				};
 
@@ -1045,6 +1062,18 @@
 
 			isControllingOrbit = (e.touches.length > 0) && (e.touches.length < 3);
 		} 
+
+		function handleKeydown(e) {
+			console.log(e);
+			switch (e.keyCode) {
+				case 32: //space
+					saveImage();
+					break;
+				default:
+					shiftPerspective();
+			}
+
+		}
 
 		function letsBegin() {
 			Tone.context.resume()
@@ -1107,32 +1136,8 @@
 
 				//console.log('grav: ' + gravX + ',' + gravZ);
 
-				//raycaster.setFromCamera(mouseCoords, camera);
-
-				//// Creates a ball
-				//var ballMass = 3;
-				//var ballRadius = 0.4;
-
-				//ball = new THREE.Mesh(new THREE.SphereBufferGeometry(ballRadius, 18, 16), ballMaterial);
-				//ball.castShadow = true;
-				//ball.receiveShadow = true;
-
-				//var ballShape = new Ammo.btSphereShape(ballRadius);
-				//ballShape.setMargin(margin);
-				//pos.copy(raycaster.ray.direction);
-				//pos.add(raycaster.ray.origin);
-				//quat.set(0, 0, 0, 1);
-				//var ballBody = createRigidBody(ball, ballShape, ballMass, pos, quat);
-				//ballBody.setFriction(0.5);
-
-				//pos.copy(raycaster.ray.direction);
-				//pos.multiplyScalar(14);
-				//ballBody.setLinearVelocity(new Ammo.btVector3(pos.x, pos.y, pos.z));
-
 				clickRequest = false;
-
 			}
-
 		}
 
 		function onWindowResize() {
@@ -1179,8 +1184,8 @@
 						//console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
 
-						physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
-						physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant / 4, 0));
+						physicsWorld.setGravity(slowGravity);
+						physicsWorld.getWorldInfo().set_m_gravity(slowGravity);
 
 						afterimagePass.uniforms["damp"].value = .999;
 
@@ -1380,6 +1385,7 @@
 					scene.remove(p);
 					p.material.dispose();
 					p.geometry.dispose();
+					p = null;
 				});
 			}
 			points = [];
@@ -1443,6 +1449,7 @@
 					scene.remove(t);
 					physicsWorld.removeSoftBody(t.userData.physicsBody, true);
 					softBodies.splice(softBodies.indexOf(t), 1);
+					t = null;
 				});
 				theOldThings.shift();
 			}
@@ -1535,8 +1542,8 @@
 				intersectionalGroups = [];
 				tcollision = false;
 
-				physicsWorld.setGravity(new Ammo.btVector3(0, gravityConstant, 0));
-				physicsWorld.getWorldInfo().set_m_gravity(new Ammo.btVector3(0, gravityConstant, 0));
+				physicsWorld.setGravity(normalGravity);
+				physicsWorld.getWorldInfo().set_m_gravity(normalGravity);
 				frst = true;
 			}, 4100);
 		}
@@ -1556,12 +1563,20 @@
 
 		var fr = 1;
 		var tw = 0;
+		const targetFPS = 30;
+		const minInterval = 1000 / targetFPS;
+		var FPSdelta, FPSnow, FPSthen = Date.now(); 
+
 		function animate() {
 			requestAnimationFrame(animate);
 
-			render();
-
-			findIntersections();
+			FPSnow = Date.now();
+			FPSdelta = FPSnow - FPSthen;
+			if (FPSdelta >= minInterval) {
+				render();
+				findIntersections();
+				FPSthen = FPSnow - (FPSdelta % minInterval);
+			}
 
 			//stats.update();
 		}
