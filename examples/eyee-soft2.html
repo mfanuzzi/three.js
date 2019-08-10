@@ -2,13 +2,51 @@
 <head>
 	<title>ｕｎｉｍａｇｉｎａｂｌｅ, 𝕤𝕦𝕡𝕖𝕣𝕔𝕠𝕤𝕞𝕚𝕔, 🇪🇹🇪🇷🇳🇦🇱 🇸🇴🇲🇪🇹🇭🇮🇳🇬🇸 [LB011]</title>
 	<meta charset="utf-8">
+	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
 	<link rel="shortcut icon" type="image/png" href="https://lazerbea.ms/img/favicon128.png" />
+	<link rel="manifest" href="manifest.json">
+
+	<!-- Open Graph data -->
+	<meta property="og:title" content="unimaginable, supercosmic, eternal somethings [LB011]" />
+	<meta property="og:site_name" content="lazerbea.ms" />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://lazerbea.ms/lb011" />
+	<meta property="og:image" content="https://lazerbea.ms/lb011/card.png" />
+	<meta property="og:description" content="eternal-falling transmogrification study for morpheme-based beings (based upon actual events)" />
+
+	<meta name="description" content="eternal-falling transmogrification study for morpheme-based beings (based upon actual events)">
 	<style>
-		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-regular-webfont.woff) format("woff");font-weight:400;font-style:normal}
-		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-italic-webfont.woff) format("woff");font-weight:400;font-style:italic}
-		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-bold-webfont.woff) format("woff");font-weight:700;font-style:normal}
-		@font-face{font-family:Adventor;src:url(https://lazerbea.ms/fonts/texgyreadventor-bolditalic-webfont.woff) format("woff");font-weight:700;font-style:italic}
+
+		@font-face {
+			font-family: Adventor;
+			src: url(https://lazerbea.ms/fonts/texgyreadventor-regular-webfont.woff) format("woff");
+			font-weight: 400;
+			font-style: normal
+		}
+
+		@font-face {
+			font-family: Adventor;
+			src: url(https://lazerbea.ms/fonts/texgyreadventor-italic-webfont.woff) format("woff");
+			font-weight: 400;
+			font-style: italic
+		}
+
+		@font-face {
+			font-family: Adventor;
+			src: url(https://lazerbea.ms/fonts/texgyreadventor-bold-webfont.woff) format("woff");
+			font-weight: 700;
+			font-style: normal
+		}
+
+		@font-face {
+			font-family: Adventor;
+			src: url(https://lazerbea.ms/fonts/texgyreadventor-bolditalic-webfont.woff) format("woff");
+			font-weight: 700;
+			font-style: italic
+		}
 
 		body {
 			color: #000;
@@ -20,6 +58,7 @@
 			cursor: grab;
 			overflow-x: hidden;
 		}
+
 		@media (orientation: portrait) {
 			body {
 				font-size: 6vw;
@@ -38,19 +77,23 @@
 		}
 
 		#container {
-			width: 100%; height: 100%;
+			width: 100%;
+			height: 100%;
 		}
+
 		#welcome {
 			position: absolute;
 			top: 0;
 			left: 0;
 			z-index: 69;
-			width: 100%; height: 100%;
+			width: 100%;
+			height: 100%;
 			display: flex;
 			flex-direction: column;
 			background-color: #fff;
 			filter: grayscale(1);
 		}
+
 		#welcome:after {
 			display: block;
 			width: 100%;
@@ -60,7 +103,8 @@
 			background: linear-gradient(#fff, #9198e5);
 			opacity: .3;
 		}
-		#welcome > div:first-child  {
+
+		#welcome > div:first-child {
 			height: 25%;
 		}
 
@@ -83,9 +127,11 @@
 			color: #fff;
 			padding: 1em;
 		}
+
 		#loadin p {
 			margin: 0;
 		}
+
 		button {
 			padding-right: 1.72209em;
 			padding-bottom: 1.06431em;
@@ -100,19 +146,31 @@
 			z-index: 666;
 			left: 1em;
 		}
+
 		button:hover {
 			color: #000;
 			cursor: grabbing;
 			animation-duration: .2s;
 		}
+
 		@keyframes gloooo {
-			0% { background-color: #18d1bd; }
-			50% { background-color: #d21888; }
-			100% { background-color: #18d1bd; }
+			0% {
+				background-color: #18d1bd;
+			}
+
+			50% {
+				background-color: #d21888;
+			}
+
+			100% {
+				background-color: #18d1bd;
+			}
 		}
+
 		#begin {
 			margin-top: .25em;
 		}
+
 		#huh {
 			width: auto;
 			font-size: 1.618em;
@@ -122,6 +180,7 @@
 			font-size: 2vw;
 			border-width: 1em;
 		}
+
 		#creds {
 			position: absolute;
 			padding: 1em 1em 0 1em;
@@ -133,19 +192,34 @@
 			display: none;
 			color: #fff;
 		}
+
 		#creds ul {
 			padding-left: .5em;
 		}
+
 		.creds #creds {
 			display: block;
 		}
 
-		#loadMsg { display: none; }
+		#loadMsg {
+			display: none;
+		}
 
-		.loading #loadMsg { display: inline; }
-		.loading #begin { display: none; }
-		.loading #huh { display: none; }
-		.loading #creds { display: none; }
+		.loading #loadMsg {
+			display: inline;
+		}
+
+		.loading #begin {
+			display: none;
+		}
+
+		.loading #huh {
+			display: none;
+		}
+
+		.loading #creds {
+			display: none;
+		}
 
 		.start {
 			overflow: hidden;
@@ -157,9 +231,17 @@
 			}
 		}
 
-		ul.mobile { display: none; }
-		body.mobile ul.mobile { display: block; }
-		body.mobile ul.desktop { display: none; }
+		ul.mobile {
+			display: none;
+		}
+
+		body.mobile ul.mobile {
+			display: block;
+		}
+
+		body.mobile ul.desktop {
+			display: none;
+		}
 	</style>
 </head>
 <body class="loading">
@@ -198,7 +280,9 @@
 	</div>
 
 	<script src="js/three.min.js"></script>
-	<script src="js/libs/ammo.js"></script>
+	<script src="eyelib.js"></script>
+
+	<!--<script src="js/libs/ammo.js"></script>
 	<script src="js/controls/OrbitControls.js"></script>
 	<script src="js/utils/BufferGeometryUtils.js"></script>
 	<script src="js/WebGL.js"></script>
@@ -219,9 +303,11 @@
 	<script src="js/modifiers/SimplifyModifier.js"></script>
 
 	<script src="js/tone.js"></script>
-	<script src="js/teoria.js"></script>
+	<script src="js/teoria.js"></script>-->
 
 	<script src="js/FileSaver.min.js"></script>
+
+	<script src="js/screenfull.min.js"></script>
 
 	<script>
 
@@ -235,6 +321,7 @@
 		var camera, controls, scene, renderer;
 		var textureLoader;
 		const clock = new THREE.Clock();
+		const clockFPS = new THREE.Clock();
 		var clickRequest = false;
 		var mouseCoords = new THREE.Vector2();
 		var raycaster = new THREE.Raycaster();
@@ -388,15 +475,18 @@
 				playNoteFromXZ(event.detail.at.x, event.detail.at.z, notemap, bbNoteVel, true, synth, ((collisionCount % 10) / 10) * 3 + .1);
 			}
 
-			// perhaps every cycle of 10x2, we should shuffle the pitches?
-			// (the problem is this happens for each hit, of course)
-			if (collisionCount % 20 === 0) {
-				reverb.roomSize.rampTo(.9, '2s')
-				setTimeout(() => {
-					//synth.releaseAll(); // this may no longer be neccesary
-					reverb.roomSize.rampTo(1.2, '2s')
-				}, 4000);
-				determineNewPitches();
+			// If this is the first collision of the set...
+			if (event.detail.first === true) {
+				// perhaps every cycle of 10x2, we should shuffle the pitches?
+				// (the problem is this happens for each hit, of course)
+				if (collisionCount % 20 === 0) {
+					reverb.roomSize.rampTo(.9, '3s')
+					setTimeout(() => {
+						//synth.releaseAll(); // this may no longer be neccesary
+						reverb.roomSize.rampTo(1.2, '2s')
+					}, 4000);
+					determineNewPitches();
+				}
 			}
 
 			// the below ensures that we have a way to auto-reset even if everything falls off the stage
@@ -942,16 +1032,16 @@
 			threeObject.position.copy(pos);
 			threeObject.quaternion.copy(quat);
 
-			var transform = new Ammo.btTransform();
+			let transform = new Ammo.btTransform();
 			transform.setIdentity();
 			transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
 			transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-			var motionState = new Ammo.btDefaultMotionState(transform);
+			let motionState = new Ammo.btDefaultMotionState(transform);
 
-			var localInertia = new Ammo.btVector3(0, 0, 0);
+			let localInertia = new Ammo.btVector3(0, 0, 0);
 			physicsShape.calculateLocalInertia(mass, localInertia);
 
-			var rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, physicsShape, localInertia);
+			let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, physicsShape, localInertia);
 			var body = new Ammo.btRigidBody(rbInfo);
 
 			threeObject.userData.physicsBody = body;
@@ -964,7 +1054,6 @@
 
 				// Disable deactivation
 				body.setActivationState(4);
-
 			}
 
 			physicsWorld.addRigidBody(body);
@@ -1033,7 +1122,7 @@
 					let wmWidth = this.width;
 					let wmHeight = this.height;
 
-					if (wmWidth  > maxWatermarkWidth) {
+					if (wmWidth > maxWatermarkWidth) {
 						const whRatio = this.height / this.width;
 						wmWidth = maxWatermarkWidth;
 						wmHeight = wmWidth * whRatio;
@@ -1046,6 +1135,10 @@
 
 					tcanvas.toBlob(bb => saveAs(bb, screenshotTitles[getRandomInt(0, screenshotTitles.length - 1)] + ".png"));
 
+					document.body.classList.remove('screenshot');
+
+					img = null;
+					watermark = null;
 				};
 
 				watermark.src = 'watermark.png';
@@ -1064,7 +1157,7 @@
 			}
 
 			isControllingOrbit = (e.touches.length > 0) && (e.touches.length < 3);
-		} 
+		}
 
 		function handleKeydown(e) {
 			//console.log(e);
@@ -1072,13 +1165,22 @@
 				case 32: //space
 					saveImage();
 					break;
+				case 13: //enter
+					if (screenfull.enabled) {
+						screenfull.request(renderer.domElement);
+					}
 				default:
 					shiftPerspective();
 			}
 
+			e.stopPropagation();
 		}
 
 		function letsBegin() {
+			if (screenfull.enabled) {
+				screenfull.request(renderer.domElement);
+			}
+
 			Tone.context.resume()
 			Tone.Master.volume.rampTo(-10, '1s');
 			reverb.roomSize.rampTo(1, '2s')
@@ -1149,7 +1251,7 @@
 			camera.updateProjectionMatrix();
 
 			renderer.setSize(window.innerWidth, window.innerHeight);
-			composer.setSize( window.innerWidth, window.innerHeight );
+			composer.setSize(window.innerWidth, window.innerHeight);
 		}
 
 		var tcollision = false;
@@ -1181,8 +1283,10 @@
 						collisionObject.trackedPointIndicies.push(i);
 					}
 					//emit event if this is the first of any to collide
+					let firstToCollide = false;
 					if (tcollision === false) {
 						tcollision = true;
+						firstToCollide = true;
 						++collisionCount;
 						//console.log('xxx');
 						//window.dispatchEvent(new Event('collision'));
@@ -1194,7 +1298,7 @@
 						if (FPSactual < 10)
 							afterimagePass.uniforms["damp"].value = .9;
 						else if (FPSactual < 20)
-							afterimagePass.uniforms["damp"].value = .98; 
+							afterimagePass.uniforms["damp"].value = .98;
 						else
 							afterimagePass.uniforms["damp"].value = .999;
 
@@ -1207,7 +1311,7 @@
 					if (collisionObject.collided === false) {
 						collisionObject.collided = true;
 						//console.log('new thing hit at ' + vec.x + ' ' + vec.z);
-						window.dispatchEvent(new CustomEvent('collision', { detail: { co: collisionObject, at: vec } }));
+						window.dispatchEvent(new CustomEvent('collision', { detail: { co: collisionObject, at: vec, first: firstToCollide } }));
 					}
 				}
 				// capture current position of all tracked points
@@ -1572,9 +1676,9 @@
 
 		var fr = 1;
 		var tw = 0;
-		const targetFPS = 30;
-		const minInterval = 1000 / targetFPS;
-		var FPSdelta, FPSnow, FPSthen = Date.now(); 
+		const targetFPS = 28;
+		const minInterval = 1 / targetFPS;
+		var FPSdelta = 0; // running time between frames
 		var FPSelapsed = 0; // the time since the last "second" rolled over
 		var FPScurrent = 0; // the number of frames in the current period of 1s
 		var FPSactual = targetFPS;  // the number of frames in the last period of 1s
@@ -1582,22 +1686,26 @@
 		function animate() {
 			requestAnimationFrame(animate);
 
-			FPSnow = Date.now();
-			FPSdelta = FPSnow - FPSthen;
+			const timeSinceLastAnimateFrame = clockFPS.getDelta();
+			FPSdelta += timeSinceLastAnimateFrame; // (seconds)
+
+			// have we reached the min delay to hit the target FPS?
 			if (FPSdelta >= minInterval) {
 				render();
 				findIntersections();
-				FPSthen = FPSnow - (FPSdelta % minInterval);
-				FPSelapsed += FPSdelta; // add this delta to the "elapsed" calculation
-				++FPScurrent;			// incriment the FPS counter
+
+				++FPScurrent; // incriment the FPS counter
+				FPSdelta -= minInterval; // subtract the reached interval from ongoing sum
 			}
 
-			if (FPSelapsed >= 1000) {
+			// figure out the current FPS, if elapsed >= 1s
+			FPSelapsed += timeSinceLastAnimateFrame;
+			if (FPSelapsed >= 1) {
 				FPSactual += FPScurrent;
 				FPSactual /= 2;
 
 				FPScurrent = 0;
-				FPSelapsed -= 1000;
+				FPSelapsed -= 1;
 			}
 		}
 
@@ -1656,6 +1764,7 @@
 			//renderer.render(scene, camera);
 			composer.render(deltaTime);
 
+			return deltaTime;
 		}
 
 		function updatePhysics(deltaTime) {
