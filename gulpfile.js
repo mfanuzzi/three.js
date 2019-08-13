@@ -21,6 +21,7 @@ const jsList = [
 	'./examples/js/math/ConvexHull.js',
 	'./examples/js/modifiers/SimplifyModifier.js',
 	'./examples/js/tone.js',
+//	'./examples/js/unmute.js',
 	'./examples/js/teoria.js'
 //	'./examples/js/FileSaver.min.js',
 //	'./examples/js/screenfull.min.js'

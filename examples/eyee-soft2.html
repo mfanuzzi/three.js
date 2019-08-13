@@ -18,6 +18,7 @@
 	<meta property="og:description" content="eternal-falling transmogrification study for morpheme-based beings (based upon actual events)" />
 
 	<meta name="description" content="eternal-falling transmogrification study for morpheme-based beings (based upon actual events)">
+
 	<style>
 
 		@font-face {
@@ -94,19 +95,19 @@
 			filter: grayscale(1);
 		}
 
-		#welcome:after {
-			display: block;
-			width: 100%;
-			height: 100%;
-			position: absolute;
-			content: '';
-			background: linear-gradient(#fff, #9198e5);
-			opacity: .3;
-		}
+			#welcome:after {
+				display: block;
+				width: 100%;
+				height: 100%;
+				position: absolute;
+				content: '';
+				background: linear-gradient(#fff, #9198e5);
+				opacity: .3;
+			}
 
-		#welcome > div:first-child {
-			height: 25%;
-		}
+			#welcome > div:first-child {
+				height: 25%;
+			}
 
 		#logo {
 			background: url('https://lazerbea.ms/img/logo.svg') no-repeat 0 bottom;
@@ -128,9 +129,9 @@
 			padding: 1em;
 		}
 
-		#loadin p {
-			margin: 0;
-		}
+			#loadin p {
+				margin: 0;
+			}
 
 		button {
 			padding-right: 1.72209em;
@@ -147,11 +148,11 @@
 			left: 1em;
 		}
 
-		button:hover {
-			color: #000;
-			cursor: grabbing;
-			animation-duration: .2s;
-		}
+			button:hover {
+				color: #000;
+				cursor: grabbing;
+				animation-duration: .2s;
+			}
 
 		@keyframes gloooo {
 			0% {
@@ -193,9 +194,9 @@
 			color: #fff;
 		}
 
-		#creds ul {
-			padding-left: .5em;
-		}
+			#creds ul {
+				padding-left: .5em;
+			}
 
 		.creds #creds {
 			display: block;
@@ -243,6 +244,18 @@
 			display: none;
 		}
 	</style>
+
+	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-12312912-16"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() { dataLayer.push(arguments); }
+		gtag('js', new Date());
+
+		gtag('config', 'UA-12312912-16', {
+		  'custom_map': {'metric1': 'fps', 'metric2' : 'collisions'}
+		});
+	</script>
 </head>
 <body class="loading">
 	<div id="container">
@@ -362,6 +375,9 @@
 
 		var isControllingOrbit = false;
 		var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+		var isAStupidFuckingAppleGarbageIDeviceThatNeedsSpecialAccomodation = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+		var begun = false;
 
 		// audio variables
 		var reverb;
@@ -637,6 +653,8 @@
 		}
 
 		function initSound() {
+			Tone.start();
+
 			Tone.Master.volume.value = -99; // without setting this, Chrome seems to crack up. like, too much.
 
 			reverb = new Tone.JCReverb(.2);
@@ -655,6 +673,12 @@
 				"release": 0.1
 			});
 			Tone.Master.chain(reverb, masterCompressor);
+
+			synth.triggerAttackRelease('c5', '.5s', undefined, .1);
+			synth2.triggerAttackRelease('c5', '.5s', undefined, .1);
+
+			synth.context.resume();
+			synth2.context.resume();
 		}
 
 		function initGraphics() {
@@ -1064,6 +1088,9 @@
 
 		function initInput() {
 			const but = document.getElementById('begin');
+			if (isAStupidFuckingAppleGarbageIDeviceThatNeedsSpecialAccomodation === true) {
+				but.addEventListener('click', unlockAudio);
+			}
 			but.addEventListener('click', letsBegin);
 
 			const huh = document.getElementById('huh');
@@ -1086,6 +1113,8 @@
 
 			const huh = document.getElementById('huh');
 			huh.removeEventListener('click', showCreds);
+
+			gtag('event', 'show_creds', {'fps': null, 'collisions' : null});
 		}
 
 		function hideCreds(e) {
@@ -1104,6 +1133,8 @@
 		}
 
 		function saveImage() {
+			gtag('event', 'save_image', {'fps': FPSactual, 'collisions' : collisionCount});
+
 			document.body.classList.add('screenshot');
 
 			var tcanvas = document.createElement('canvas');
@@ -1161,27 +1192,30 @@
 
 		function handleKeydown(e) {
 			//console.log(e);
-			switch (e.keyCode) {
-				case 32: //space
-					saveImage();
-					break;
-				case 13: //enter
-					if (screenfull.enabled) {
-						screenfull.request(renderer.domElement);
-					}
-				default:
-					shiftPerspective();
-			}
+			if (begun) {
 
-			e.stopPropagation();
+				switch (e.keyCode) {
+					case 32: //space
+						saveImage();
+						break;
+					case 13: //enter
+						if (screenfull.enabled) {
+							screenfull.request(renderer.domElement);
+						}
+					default:
+						shiftPerspective();
+				}
+
+				e.stopPropagation();
+			}
 		}
 
 		function letsBegin() {
+
 			if (screenfull.enabled) {
 				screenfull.request(renderer.domElement);
 			}
 
-			Tone.context.resume()
 			Tone.Master.volume.rampTo(-10, '1s');
 			reverb.roomSize.rampTo(1, '2s')
 
@@ -1214,6 +1248,13 @@
 			window.addEventListener('mouseup', function (event) {
 				isControllingOrbit = false;
 			});
+
+			begun = true;
+
+			// wait a couple seconds to get an initial FPS reading
+			setTimeout(function () {
+				gtag('event', 'lets_begin', {'fps': FPSactual, 'collisions' : collisionCount});
+			}, 2000);
 		}
 
 		function processClick() {
@@ -1304,8 +1345,10 @@
 
 						volumeMatOld.opacity = volumeMat.opacity;
 
-						if (collisionCount % 10 == 0)
+						if (collisionCount % 10 == 0) {
 							halftonePass.uniforms.greyscale.value = !halftonePass.uniforms.greyscale.value;
+							gtag('event', 'collision', {'fps': FPSactual, 'collisions' : collisionCount});
+						}
 					}
 					//now track this particular one
 					if (collisionObject.collided === false) {
@@ -1746,6 +1789,8 @@
 				camera.position.set(pos.x, pos.y, pos.z);
 				controls.update();
 			}
+
+			gtag('event', 'shift_perspective', { 'fps': FPSactual, 'collisions': collisionCount });
 		}
 
 		function render() {
@@ -1837,6 +1882,56 @@
 			}
 
 		}
+
+		// This is fucking disgusting. IOS is the literal worst and I hate everything about this hack. Fuck you, Apple.
+		var isWebAudioUnlocked = false;
+		var isHTMLAudioUnlocked = false;
+
+		function unlockAudio() {
+			if (isWebAudioUnlocked  && isHTMLAudioUnlocked) return;
+
+			// Unlock WebAudio - create short silent buffer and play it
+			// This will allow us to play web audio at any time in the app
+			var buffer = Tone.context.createBuffer(1, 1, 22050); // 1/10th of a second of silence
+			var source = Tone.context.createBufferSource();
+			source.buffer = buffer;
+			source.connect(Tone.context.destination);
+			source.onended = function()
+			{
+				console.log("WebAudio unlocked!");
+				isWebAudioUnlocked = true;
+				if (isWebAudioUnlocked && isHTMLAudioUnlocked)
+				{
+					console.log("WebAudio unlocked and playable w/ mute toggled on!");
+					//window.removeEventListener("mousedown", unlockAudio);
+				}
+			};
+			source.start();
+
+			// Unlock HTML5 Audio - load a data url of short silence and play it
+			// This will allow us to play web audio when the mute toggle is on
+			const silenceDataURL = "data:audio/mp3;base64,//MkxAAHiAICWABElBeKPL/RANb2w+yiT1g/gTok//lP/W/l3h8QO/OCdCqCW2Cw//MkxAQHkAIWUAhEmAQXWUOFW2dxPu//9mr60ElY5sseQ+xxesmHKtZr7bsqqX2L//MkxAgFwAYiQAhEAC2hq22d3///9FTV6tA36JdgBJoOGgc+7qvqej5Zu7/7uI9l//MkxBQHAAYi8AhEAO193vt9KGOq+6qcT7hhfN5FTInmwk8RkqKImTM55pRQHQSq//MkxBsGkgoIAABHhTACIJLf99nVI///yuW1uBqWfEu7CgNPWGpUadBmZ////4sL//MkxCMHMAH9iABEmAsKioqKigsLCwtVTEFNRTMuOTkuNVVVVVVVVVVVVVVVVVVV//MkxCkECAUYCAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
+			const tag = document.createElement("audio");
+			tag.controls = false;
+			tag.preload = "auto";
+			tag.loop = false;
+			tag.src = silenceDataURL;
+			tag.onended = function()
+			{
+				console.log("HTMLAudio unlocked!");
+				isHTMLAudioUnlocked = true;
+				if (isWebAudioUnlocked && isHTMLAudioUnlocked)
+				{
+					console.log("WebAudio unlocked and playable w/ mute toggled on!");
+					//window.removeEventListener("mousedown", unlockAudio);
+				}
+			};
+			var p = tag.play();
+			if (p) p.then(function(){console.log("play success")}, function(reason){console.log("play failed", reason)});
+		}
+
+		//window.addEventListener("mousedown", unlockAudio);
+
 
 	</script>
 
