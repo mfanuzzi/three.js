@@ -1,6 +1,6 @@
 <html lang="en">
 <head>
-	<title>ｕｎｉｍａｇｉｎａｂｌｅ, 𝕤𝕦𝕡𝕖𝕣𝕔𝕠𝕤𝕞𝕚𝕔, 🇪🇹🇪🇷🇳🇦🇱 🇸🇴🇲🇪🇹🇭🇮🇳🇬🇸 [LB011]</title>
+	<title>KWEEBz™! are ｕｎｉｍａｇｉｎａｂｌｅ, 𝕤𝕦𝕡𝕖𝕣𝕔𝕠𝕤𝕞𝕚𝕔, 🇪🇹🇪🇷🇳🇦🇱 🇸🇴🇲🇪🇹🇭🇮🇳🇬🇸 [LB011]</title>
 	<meta charset="utf-8">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-capable" content="yes">
@@ -10,7 +10,7 @@
 	<link rel="manifest" href="manifest.json">
 
 	<!-- Open Graph data -->
-	<meta property="og:title" content="unimaginable, supercosmic, eternal somethings [LB011]" />
+	<meta property="og:title" content="KWEEBz™ are unimaginable, supercosmic, eternal somethings [LB011]" />
 	<meta property="og:site_name" content="lazerbea.ms" />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://lazerbea.ms/lb011" />
@@ -126,12 +126,20 @@
 		#loadin {
 			background-color: #d21888;
 			color: #fff;
-			padding: 1em;
+			padding: 0 1em 1em 1em;
 		}
 
-			#loadin p {
-				margin: 0;
-			}
+		#loadin p {
+			margin: 0;
+		}
+
+		#kweebz {
+			text-shadow: -.1em .1em black;
+		}
+
+		#kweebz img {
+			filter: drop-shadow( 3px 3px 2px rgba(255, 255, 255, .7));
+		}
 
 		button {
 			padding-right: 1.72209em;
@@ -141,18 +149,18 @@
 			background-color: #18d1bd;
 			color: #fff;
 			animation: 2s infinite alternate gloooo;
-			text-shadow: .05em 0.25em 0px black;
+			text-shadow: -.05em 0.05em 0px black;
 			border-width: .5em;
 			position: absolute;
 			z-index: 666;
 			left: 1em;
 		}
 
-			button:hover {
-				color: #000;
-				cursor: grabbing;
-				animation-duration: .2s;
-			}
+		button:hover {
+			color: #000;
+			cursor: grabbing;
+			animation-duration: .2s;
+		}
 
 		@keyframes gloooo {
 			0% {
@@ -170,6 +178,7 @@
 
 		#begin {
 			margin-top: .25em;
+			padding-bottom: .5em;
 		}
 
 		#huh {
@@ -194,9 +203,9 @@
 			color: #fff;
 		}
 
-			#creds ul {
-				padding-left: .5em;
-			}
+		#creds ul {
+			padding-left: .5em;
+		}
 
 		.creds #creds {
 			display: block;
@@ -230,6 +239,11 @@
 			#huh {
 				font-size: 5vw;
 			}
+
+			#kweebz img {
+				max-width: calc(100% - 1.5em);
+			}
+
 		}
 
 		ul.mobile {
@@ -264,7 +278,7 @@
 		<div id="logo"></div>
 		<div id="loadin">
 			<p>
-				<span style="text-shadow: -.1em .1em black">LB011</span>
+				<span id="kweebz"><img src="kweebs.svg" alt="KWEEBz" />™</span>
 				<br /><em style="letter-spacing: .5em">&ldquo;unimaginable, supercosmic, eternal somethings</em>&rdquo;
 			</p>
 			<p>
@@ -275,7 +289,7 @@
 		</div>
 		<div id="creds">
 			<p>
-				eternal falling.<br />
+				<strong>KWEEB</strong>™™ simulator<br />
 				based upon actual events &amp; a dream about endless space / infinite renewal.
 			</p>
 			<ul class="desktop">
@@ -1159,19 +1173,37 @@
 						wmHeight = wmWidth * whRatio;
 					}
 
-					const wmOffsetY = 10;
+					const wmOffsetY = (img.height - wmHeight) - 7;
 					const wmOffsetX = (img.width / 2) - (wmWidth / 2);
-
 					tcanvas.getContext('2d').drawImage(this, wmOffsetX, wmOffsetY, wmWidth, wmHeight);
 
-					tcanvas.toBlob(bb => saveAs(bb, screenshotTitles[getRandomInt(0, screenshotTitles.length - 1)] + ".png"));
+					var watermark2 = new Image();
+					watermark2.onload = function () {
+						let maxWatermarkWidth = img.width * (img.width > img.height ? .08 : .25);
+						let wmWidth = this.width;
+						let wmHeight = this.height;
 
-					document.body.classList.remove('screenshot');
+						if (wmWidth > maxWatermarkWidth) {
+							const whRatio = this.height / this.width;
+							wmWidth = maxWatermarkWidth;
+							wmHeight = wmWidth * whRatio;
+						}
 
-					img = null;
-					watermark = null;
+						const wmOffsetY = 10;
+						const wmOffsetX = (img.width / 2) - (wmWidth / 2);
+
+						tcanvas.getContext('2d').drawImage(this, wmOffsetX, wmOffsetY, wmWidth, wmHeight);
+
+						tcanvas.toBlob(bb => saveAs(bb, screenshotTitles[getRandomInt(0, screenshotTitles.length - 1)] + ".png"));
+
+						document.body.classList.remove('screenshot');
+
+						img = null;
+						watermark = null;
+						watermark2 = null;
+					};
+					watermark2.src = 'kweebz.png';
 				};
-
 				watermark.src = 'watermark.png';
 			};
 			img.src = renderer.domElement.toDataURL();
@@ -1203,7 +1235,9 @@
 							screenfull.request(renderer.domElement);
 						}
 					default:
-						shiftPerspective();
+						if (e.keyCode > 20 || e.keyCode === 9 ) {
+							shiftPerspective();
+						}
 				}
 
 				e.stopPropagation();
@@ -1883,7 +1917,7 @@
 
 		}
 
-		// This is fucking disgusting. IOS is the literal worst and I hate everything about this hack. Fuck you, Apple.
+		// This is fucking disgusting. IOS is the literal worst and I hate everything about this hack.
 		var isWebAudioUnlocked = false;
 		var isHTMLAudioUnlocked = false;
 
@@ -1898,13 +1932,12 @@
 			source.connect(Tone.context.destination);
 			source.onended = function()
 			{
-				console.log("WebAudio unlocked!");
 				isWebAudioUnlocked = true;
-				if (isWebAudioUnlocked && isHTMLAudioUnlocked)
-				{
-					console.log("WebAudio unlocked and playable w/ mute toggled on!");
-					//window.removeEventListener("mousedown", unlockAudio);
-				}
+				//if (isWebAudioUnlocked && isHTMLAudioUnlocked)
+				//{
+				//	console.log("WebAudio unlocked and playable w/ mute toggled on!");
+				//	//window.removeEventListener("mousedown", unlockAudio);
+				//}
 			};
 			source.start();
 
@@ -1920,18 +1953,15 @@
 			{
 				console.log("HTMLAudio unlocked!");
 				isHTMLAudioUnlocked = true;
-				if (isWebAudioUnlocked && isHTMLAudioUnlocked)
-				{
-					console.log("WebAudio unlocked and playable w/ mute toggled on!");
-					//window.removeEventListener("mousedown", unlockAudio);
-				}
+				//if (isWebAudioUnlocked && isHTMLAudioUnlocked)
+				//{
+				//	//console.log("WebAudio unlocked and playable w/ mute toggled on!");
+				//	//window.removeEventListener("mousedown", unlockAudio);
+				//}
 			};
 			var p = tag.play();
 			if (p) p.then(function(){console.log("play success")}, function(reason){console.log("play failed", reason)});
 		}
-
-		//window.addEventListener("mousedown", unlockAudio);
-
 
 	</script>
 
